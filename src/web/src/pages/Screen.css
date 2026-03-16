@@ -1,0 +1,287 @@
+.screen {
+  --text: #1a1a1a;
+  --muted: #666;
+  --border: #e0e0e0;
+}
+
+.screen h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.screen .subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.screen-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.empty-state p {
+  margin: 0.25rem 0;
+}
+
+/* Playbooks */
+.playbook-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.playbook-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.playbook-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.playbook-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.ai-badge {
+  font-size: 0.75rem;
+  background: #e0e7ff;
+  color: #4338ca;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.playbook-meta {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+
+.playbook-steps {
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.playbook-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.playbook-actions button {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Brain Dump */
+.brain-dump textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.brain-dump .actions {
+  margin-top: 0.5rem;
+}
+
+.flow-hint {
+  text-align: center;
+  color: var(--muted);
+  margin: 1rem 0;
+}
+
+/* Task list */
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.task-table th,
+.task-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.task-table th {
+  font-weight: 600;
+}
+
+.actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.quick-add {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.quick-add input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Daily */
+.daily-screen .focus-sentence {
+  margin-bottom: 1.5rem;
+}
+
+.daily-screen .focus-sentence label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.focus-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.focus-row input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.task-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.task-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.task-card-header {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.task-num {
+  font-weight: 600;
+}
+
+.task-title {
+  font-weight: 500;
+}
+
+.next-step {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+
+.task-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+
+.task-meta span {
+  margin-right: 1rem;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.task-actions button {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.task-actions button:first-child {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.ai-suggestion {
+  padding: 1rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+/* Helper */
+.helper {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #2563eb;
+}
+
+.helper h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.helper p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* Settings */
+.settings-section {
+  margin-bottom: 1.5rem;
+}
+
+.settings-section label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.settings-section label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setting-hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0.25rem 0 0;
+}

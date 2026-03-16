@@ -1,0 +1,83 @@
+1.) overall structure and naming:
+
+Tenant (FloatingKey)
+
+Subscriptions
+│
+├─ FloatingKey-Platform
+│    ├─ DNS
+│    ├─ monitoring dashboards
+│    └─ shared AI gateway (optional to use in future between all RGs)
+│
+├─ BidBudAI-Prod
+│    └─ rg-bidbud-prod
+|		- bidbud-web (container app)
+|		- bidbud-api (container app)
+|		- bidbud-ai (azure openAI)
+|		- bidbud-env (container apps envir)
+|		- bidbud-kv (key vault)
+|		- bidbud-sql-<location> (sql server)
+|		- bidbud-acr (container registry)	
+|		- bidbud-db (sql database)
+|		- bidbud-sa (storage account)
+|		- bidbud-logs (log analytics workspace)
+|		- bidbud-ins (app insights)
+|		- bidbud-isd (insights smart detection/action group)
+|
+│
+├─ SkafoldAI-Prod
+│    └─ rg-skafoldai-prod
+|		- skafoldai-web (container app / static web app)
+|		- skafoldai-api (container app / app service)
+|		- skafoldai-ai (azure openAI)
+|		- skafoldai-env (container apps envir)
+|		- skafoldai-kv (key vault)
+|		- skafoldai-sql-<location> (sql server)
+|		- skafoldai-acr (container registry)	
+|		- skafoldai-db (sql database)
+|		- skafoldai-sa (storage account; no hyphens allowed: skafoldaisa)
+|		- skafoldai-logs (log analytics workspace)
+|		- skafoldai-ins (app insights)
+|		- skafoldai-isd (insights smart detection/action group)
+|	
+│
+└─ RezAGI-Prod
+     └─ rg-rezagi-prod
+|		- rezagi-web (container app)
+|		- rezagi-api (container app)
+|		- rezagi-ai (azure openAI)
+|		- rezagi-env (container apps envir)
+|		- rezagi-kv (key vault)
+|		- rezagi-sql-<location> (sql server)
+|		- rezagi-acr (container registry)	
+|		- rezagi-db (sql database)
+|		- rezagi-sa (storage account)
+|		- rezagi-logs (log analytics workspace)
+|		- rezagi-ins (app insights)
+|		- rezagi-isd (insights smart detection/action group)
+|
+
+2.) Locations within each RG, should attempt to either be all US East or all US West - or if needing to mix at all, mostly one or other + Central, but not mix of East and West (due to degredation).  
+
+3.) Each product (BidBudAI-Prod, SkafoldAI-Prod, RezAGI-Prod) contain foundational resources:
+
+Web container
+API container
+Database
+Key Vault
+Log Analytics
+Storage
+AI resource
+
+4.) Domain mapping (custom domains per app):
+   - SkafoldAI: www.skafoldai.com, api.skafoldai.com
+   - RezAGI: www.rezagi.com, api.rezagi.com
+   - BidBudAI: www.bidbudai.com, api.bidbudai.com
+
+5.) ISOLATION: Each subscription and its resource group are completely separate. 
+   - NO SkafoldAI resources or naming in BidBudAI-Prod / rg-bidbud-prod
+   - NO BidBudAI resources or naming in SkafoldAI-Prod / rg-skafoldai-prod  
+   - NO RezAGI resources or naming in either of the above
+   Each application is fully isolated.
+
+   See PRODUCTION_DEPLOYMENT.md for deployment steps (web, api, DNS, Entra ID).

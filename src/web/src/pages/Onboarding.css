@@ -1,0 +1,99 @@
+.onboarding {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #f8fafc;
+}
+
+.onboarding-card {
+  max-width: 480px;
+  width: 100%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.onboarding-card h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.onboarding-card p {
+  color: #666;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.onboarding-card input,
+.onboarding-card textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-card textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-progress span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0e0e0;
+}
+
+.onboarding-progress span.active {
+  background: #2563eb;
+}
+
+.onboarding-card button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.onboarding-card button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.landing-entra-btn {
+  background: #2f2f2f !important;
+  margin-bottom: 0.5rem;
+}
+
+.landing-entra-btn:hover:not(:disabled) {
+  background: #1a1a1a !important;
+}
+
+.landing-divider {
+  text-align: center;
+  color: #999;
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.landing-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: -0.5rem 0 1rem 0;
+}
