@@ -92,10 +92,15 @@ CREATE TABLE user_settings (
   high_contrast INT DEFAULT 0,
   font_size_percent INT DEFAULT 100,
   dyslexia_font INT DEFAULT 0,
+  reduce_motion INT DEFAULT 0,
+  focus_mode INT DEFAULT 0,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Indexes
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'reduce_motion') ALTER TABLE user_settings ADD reduce_motion INT DEFAULT 0;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'focus_mode') ALTER TABLE user_settings ADD focus_mode INT DEFAULT 0;
+
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_goals_user') CREATE INDEX idx_goals_user ON goals(user_id);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_playbooks_user') CREATE INDEX idx_playbooks_user ON playbooks(user_id);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_tasks_user') CREATE INDEX idx_tasks_user ON tasks(user_id);

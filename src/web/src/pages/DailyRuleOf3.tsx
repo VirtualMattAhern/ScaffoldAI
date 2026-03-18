@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { useSettings } from '../contexts/SettingsContext';
 import './Screen.css';
 
 type Task = {
@@ -17,7 +19,11 @@ export function DailyRuleOf3() {
   const [loading, setLoading] = useState(true);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [helperText, setHelperText] = useState('');
+  const [undoTask, setUndoTask] = useState<Task | null>(null);
+  const [transition, setTransition] = useState(false);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helperRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     Promise.all([api.focusSentence.get(), api.tasks.top3()]).then(([fs, taskList]) => {
@@ -30,13 +36,7 @@ export function DailyRuleOf3() {
     api.daily.helper(activeTaskId ?? undefined).then((r) => setHelperText(r.text)).catch(() => setHelperText(''));
   }, [tasks, activeTaskId]);
 
-  useEffect(() => {
-    if (activeTaskId && helperRef.current) helperRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [activeTaskId]);
-
-  const handleSaveFocus = () => {
-    api.focusSentence.save(focusSentence);
-  };
+  const handleSaveFocus = () => { api.focusSentence.save(focusSentence); };
 
   const handleSuggestFocus = async () => {
     const { sentence } = await api.focusSentence.suggest();
@@ -46,14 +46,30 @@ export function DailyRuleOf3() {
 
   const handleStart = (id: string) => {
     api.tasks.update(id, { status: 'in_progress' });
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'in_progress' } : t)));
-    setActiveTaskId(id);
+    navigate(`/guided/${id}`);
   };
 
-  const handleDone = (id: string) => {
+  const handleDone = useCallback((id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
     api.tasks.update(id, { status: 'done' });
     setTasks((prev) => prev.filter((t) => t.id !== id));
     if (activeTaskId === id) setActiveTaskId(null);
+    setUndoTask(task);
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => {
+      setUndoTask(null);
+      setTransition(true);
+      setTimeout(() => setTransition(false), 5000);
+    }, 5000);
+  }, [tasks, activeTaskId]);
+
+  const handleUndo = () => {
+    if (!undoTask) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    api.tasks.update(undoTask.id, { status: undoTask.status });
+    setTasks((prev) => [...prev, undoTask]);
+    setUndoTask(null);
   };
 
   const handlePause = (id: string) => {
@@ -62,11 +78,37 @@ export function DailyRuleOf3() {
     if (activeTaskId === id) setActiveTaskId(null);
   };
 
+  const handleNotToday = async (id: string) => {
+    await api.tasks.update(id, { top3Candidate: false });
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    if (activeTaskId === id) setActiveTaskId(null);
+  };
+
   if (loading) return <div className="screen-loading">Loading…</div>;
 
   return (
     <div className="screen daily-screen">
+      {settings.focusMode && (
+        <div className="focus-mode-bar">
+          <button type="button" onClick={() => updateSettings({ focusMode: false })} className="exit-focus-btn">
+            Exit focus mode
+          </button>
+        </div>
+      )}
       <h1>Daily — Rule of 3</h1>
+
+      {transition && (
+        <div className="transition-prompt">
+          <p>Great work. Take a breath. Ready for the next one?</p>
+        </div>
+      )}
+
+      {undoTask && (
+        <div className="undo-toast">
+          <span>"{undoTask.title}" marked done.</span>
+          <button onClick={handleUndo}>Undo</button>
+        </div>
+      )}
 
       <section className="focus-sentence">
         <label htmlFor="focus">Focus sentence</label>
@@ -92,20 +134,22 @@ export function DailyRuleOf3() {
         ) : (
           <ul className="task-cards">
             {tasks.map((t, i) => (
-              <li key={t.id} className="task-card">
+              <li key={t.id} className={`task-card ${t.status === 'in_progress' ? 'task-card-active' : ''}`}>
                 <div className="task-card-header">
-                  <span className="task-num">{i + 1}.</span>
+                  <span className="task-num" title="Top 3 position">{i + 1}.</span>
                   <span className="task-title">{t.title}</span>
+                  <span className={`status-badge status-${t.status}`} title={`Status: ${t.status.replace('_', ' ')}`}>{t.status.replace('_', ' ')}</span>
                 </div>
-                {t.nextStep && <p className="next-step">Next 10 min: {t.nextStep}</p>}
+                {t.nextStep && <p className="next-step" title="Suggested next step">Next 10 min: {t.nextStep}</p>}
                 <div className="task-meta">
-                  {t.timeboxMinutes && <span>Timebox: {t.timeboxMinutes} min</span>}
-                  <span>Task age: {taskAge(t.createdAt)}</span>
+                  {t.timeboxMinutes && <span title="Timebox duration">Timebox: {t.timeboxMinutes} min</span>}
+                  <span title="Days since task was created">Task age: {taskAge(t.createdAt)}</span>
                 </div>
                 <div className="task-actions">
                   <button onClick={() => handleStart(t.id)}>Start</button>
                   <button onClick={() => handlePause(t.id)}>Pause</button>
                   <button onClick={() => handleDone(t.id)}>Done</button>
+                  <button onClick={() => handleNotToday(t.id)} className="not-today-btn">Not today</button>
                 </div>
               </li>
             ))}
@@ -113,10 +157,12 @@ export function DailyRuleOf3() {
         )}
       </section>
 
+      {!settings.focusMode && (
       <section className="helper" ref={helperRef}>
         <h3>Your SkafoldAI Helper</h3>
         <p>{helperText || 'Start with the first task.'}</p>
       </section>
+      )}
     </div>
   );
 }

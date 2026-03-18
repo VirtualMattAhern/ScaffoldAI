@@ -45,6 +45,30 @@ export function Settings() {
         </label>
         <p className="setting-hint">Uses OpenDyslexic when available for easier reading.</p>
       </section>
+
+      <section className="settings-section">
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.reduceMotion}
+            onChange={(e) => updateSettings({ reduceMotion: e.target.checked })}
+          />
+          Reduce motion
+        </label>
+        <p className="setting-hint">Disables animations and transitions. WCAG 2.1 AAA.</p>
+      </section>
+
+      <section className="settings-section">
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.focusMode}
+            onChange={(e) => updateSettings({ focusMode: e.target.checked })}
+          />
+          Focus mode (Daily screen)
+        </label>
+        <p className="setting-hint">Hides header, nav, and helper on Daily — just your Top 3 tasks.</p>
+      </section>
     </div>
   );
 }

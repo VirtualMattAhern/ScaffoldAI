@@ -96,6 +96,8 @@ async function initSqliteSchema() {
       high_contrast INTEGER DEFAULT 0,
       font_size_percent INTEGER DEFAULT 100,
       dyslexia_font INTEGER DEFAULT 0,
+      reduce_motion INTEGER DEFAULT 0,
+      focus_mode INTEGER DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id);
@@ -107,6 +109,8 @@ async function initSqliteSchema() {
 
   const devUserId = 'dev-user-001';
   db.prepare('INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)').run(devUserId, 'dev@skafoldai.local', 'Dev User');
+  try { db.prepare('ALTER TABLE user_settings ADD COLUMN reduce_motion INTEGER DEFAULT 0').run(); } catch {}
+  try { db.prepare('ALTER TABLE user_settings ADD COLUMN focus_mode INTEGER DEFAULT 0').run(); } catch {}
   db.close();
 }
 

@@ -16,6 +16,8 @@ import { focusSentenceRouter } from './routes/focus-sentence.js';
 import { dailyRouter } from './routes/daily.js';
 import { settingsRouter } from './routes/settings.js';
 import { authRouter } from './routes/auth.js';
+import { guidedRouter } from './routes/guided.js';
+import { decisionsRouter } from './routes/decisions.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3003;
@@ -60,6 +62,8 @@ app.use('/api/brain-dump', brainDumpRouter);
 app.use('/api/focus-sentence', focusSentenceRouter);
 app.use('/api/daily', dailyRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/guided', guidedRouter);
+app.use('/api/decisions', decisionsRouter);
 
 app.get('/api/health', (_req, res) => {
   const azureConfigured = !!(

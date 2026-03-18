@@ -1,15 +1,15 @@
 # Azure Setup Guide for SkafoldAI (SkafoldAI-Prod Subscription)
 
-**Last updated:** 2026-03-15 UTC
+**Last updated:** 2026-03-18 UTC
 
 This guide walks you through setting up **all Azure resources** for SkafoldAI under a single subscription, with a dedicated Azure OpenAI/Foundry instance so it does not share resources with other apps.
 
 **Subscription:** SkafoldAI-Prod  
-**Region:** East US (or your preferred region—keep it consistent for all resources)  
+**Region:** Central US (SQL + Container Apps; East was unavailable for SQL)  
 **Naming prefix:** `skafoldai-`  
-**Resource group:** `rg-skafoldai-prod` (per [Azure Highlevel Structure](Azure%20Highlevel%20Structure.txt))
+**Resource group:** `skafoldai-rg` (or `rg-skafoldai-prod`)
 
-> **Legacy deployments:** If you have existing resources with old names (`skafoldai-rg`, `skafoldai-openai`, `skafoldai-insights`, `skafoldaistorage`), you can continue using them. New deployments should use the structure naming above.
+> **Legacy deployments:** If you have existing resources with old names (`skafoldai-rg`, `skafoldai-openai`, etc.), you can continue using them.
 
 ---
 
@@ -18,17 +18,19 @@ This guide walks you through setting up **all Azure resources** for SkafoldAI un
 | Step | Resource | Status |
 |------|----------|--------|
 | 0 | Subscription & Resource Group | ✅ Done |
-| 1 | Log Analytics + App Insights | ✅ Done |
+| 1 | Log Analytics + App Insights | ✅ Done (or run `azure-monitoring-setup.ps1`) |
 | 2 | Key Vault | ✅ Done |
 | 3 | Storage Account | ✅ Done |
-| 4 | Azure OpenAI / Foundry | ✅ skafoldai-ai in use |
-| 5 | Database | ✅ skafoldai-db (Azure SQL) |
-| 6 | App Service (API) | ⬜ In progress |
-| 7 | Static Web App (Frontend) | ⬜ In progress |
-| 8 | Custom domain (www.skafoldai.com) | ⬜ Pending |
-| 9 | Production deploy & verify | ⬜ Pending |
+| 4 | Azure OpenAI / Foundry | ✅ skafoldai-openai in use |
+| 5 | Database | ✅ skafoldai-db (Azure SQL, skafoldai-sql-cus) |
+| 6 | Container Apps (API + Web) | ✅ skafoldai-api, skafoldai-web |
+| 7 | CI/CD (GitHub Actions) | ✅ See [CI/CD](#step-10-cicd-github-actions) |
+| 8 | Monitoring (App Insights) | ✅ See [Monitoring](#step-11-monitoring) |
+| 9 | Managed Identity (ACR) | ✅ See [Managed Identity](#step-12-managed-identity-for-acr) |
+| 10 | Entra ID (Microsoft sign-in) | ✅ See [Entra ID](#step-13-entra-id) |
+| 11 | Custom domain (www.skafoldai.com) | ⬜ Pending DNS update |
+| 12 | Production deploy & verify | ⬜ Pending |
 
-> **Production deployment:** See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for full www.skafoldai.com setup.  
 > **Checklist:** See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) for step-by-step progress and your action items.
 
 **Start at Step 0** if the subscription is empty (as shown in your overview).
@@ -55,18 +57,18 @@ For Step 4 (move existing Foundry), either:
 ## Architecture Overview
 
 ```
-[Users] → skafoldai-web (Static Web App) → React frontend
+[Users] → skafoldai-web (Container App) → React frontend
                 ↓
          skafoldai-api (Container App) → Node.js API
                 ↓                    ↓
-         skafoldai-db (Azure SQL)   skafoldai-ai (Azure OpenAI / Foundry)
+         skafoldai-db (Azure SQL)   skafoldai-openai (Azure OpenAI)
                 ↓
          skafoldai-kv (Key Vault) — secrets
          skafoldai-logs (Log Analytics) — monitoring
-         skafoldai-storage (Storage) — SQLite fallback / files
+         skafoldai-insights (Application Insights) — telemetry
 ```
 
-All resources live in **SkafoldAI-Prod** subscription, **same region**, resource group `rg-skafoldai-prod`.
+All resources live in **SkafoldAI-Prod** subscription, **Central US**, resource group `skafoldai-rg`.
 
 ---
 
@@ -84,7 +86,7 @@ All resources live in **SkafoldAI-Prod** subscription, **same region**, resource
 | Database | `skafoldai-db` | Azure SQL or PostgreSQL |
 | Container Apps Env | `skafoldai-env` | |
 | API (Container App) | `skafoldai-api` | |
-| Web (Static Web App) | `skafoldai-web` | |
+| Web (Container App) | `skafoldai-web` | |
 
 ---
 
@@ -234,28 +236,83 @@ If your Foundry was created in another subscription (e.g. a different app’s su
 
 ---
 
-## Step 8: skafoldai-web (Static Web App)
+## Step 8: skafoldai-web (Container App)
 
-1. **Create a resource** → **Static Web App**.
-2. **Resource group:** `rg-skafoldai-prod`  
-   **Name:** `skafoldai-web`  
-   **Plan:** Free.
-3. **Deploy:** Source: GitHub (or Other) → select repo, branch `main`.
-4. **Build preset:** Custom  
-   **App location:** `src/web`  
-   **Output location:** `dist`  
-   **Api location:** *(empty—API is on Container App)*
-5. **Create**.
-6. Add GitHub secret `VITE_API_URL` = `https://<skafoldai-api-url>/api` (your Container App URL).
+Web is deployed as a Container App (not Static Web App). Use `.\scripts\azure-container-apps-deploy.ps1` to create both API and Web Container Apps. The Web image is built with `VITE_API_URL=https://api.skafoldai.com/api` for production.
 
 ---
 
 ## Step 9: Wire Secrets, CORS, and Deploy
 
-1. **CORS:** In skafoldai-api (Container App) → **Ingress** → add your Static Web App URL (e.g., `https://skafoldai-web.azurestaticapps.net`) to allowed origins.
+1. **CORS:** In skafoldai-api (Container App) → **Ingress** → add your Web Container App URL to allowed origins.
 2. **Environment variables:** Ensure API has `CORS_ORIGINS` including the frontend URL.
-3. **Deploy API:** Build and push container; update Container App to use new image.
-4. **Deploy Web:** Push to `main` to trigger Static Web App build, or run `swa deploy` manually.
+3. **Deploy:** Use GitHub Actions (Step 10) or run `.\scripts\azure-container-apps-deploy.ps1 -SkipBuild` after building images.
+
+---
+
+## Step 10: CI/CD (GitHub Actions)
+
+Automated deployment on push to `main` for `src/api` and `src/web`.
+
+### 10a. Create service principal
+
+```powershell
+az ad sp create-for-rbac --name "github-actions-skafoldai" `
+  --role contributor `
+  --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/skafoldai-rg
+```
+
+Note the output: `appId`, `password`, `tenant`.
+
+### 10b. Add GitHub secrets
+
+In **GitHub** → **Settings** → **Secrets and variables** → **Actions**, add:
+
+| Secret | Value |
+|--------|-------|
+| `AZURE_CREDENTIALS` | JSON: `{"clientId":"<appId>","clientSecret":"<password>","tenantId":"<tenant>","subscriptionId":"<SUBSCRIPTION_ID>"}` |
+
+### 10c. Workflow
+
+The workflow `.github/workflows/azure-container-apps-deploy.yml` builds images in ACR and updates both Container Apps. It triggers on push to `main` when `src/api/**` or `src/web/**` change.
+
+---
+
+## Step 11: Monitoring
+
+Application Insights + Log Analytics for traces and logs.
+
+```powershell
+.\scripts\azure-monitoring-setup.ps1
+```
+
+This creates `skafoldai-logs` (Log Analytics) and `skafoldai-insights` (Application Insights), then links App Insights to the Container Apps environment. View telemetry in **Azure Portal** → **Application Insights** → **skafoldai-insights**.
+
+---
+
+## Step 12: Managed Identity for ACR
+
+Use managed identity instead of ACR admin credentials for image pull.
+
+```powershell
+.\scripts\azure-managed-identity-acr.ps1
+```
+
+This creates `skafoldai-acr-pull` (user-assigned identity), grants `AcrPull` on ACR, and configures both Container Apps to use it. Optionally disables ACR admin.
+
+---
+
+## Step 13: Entra ID
+
+Microsoft sign-in for production. Code is ready; add env vars when you register the app.
+
+```powershell
+.\scripts\azure-entra-config.ps1 -EntraTenantId "<tenant-id>" -EntraClientId "<client-id>"
+```
+
+Or pass to the deploy script: `.\scripts\azure-container-apps-deploy.ps1 -EntraTenantId "..." -EntraClientId "..."`
+
+Get values from **Entra** → **App registrations** → **SkafoldAI** → **Overview**.
 
 ---
 

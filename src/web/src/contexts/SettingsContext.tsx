@@ -6,12 +6,16 @@ type Settings = {
   highContrast: boolean;
   fontSizePercent: number;
   dyslexiaFont: boolean;
+  reduceMotion: boolean;
+  focusMode: boolean;
 };
 
 const defaultSettings: Settings = {
   highContrast: false,
   fontSizePercent: 100,
   dyslexiaFont: false,
+  reduceMotion: false,
+  focusMode: false,
 };
 
 const SettingsContext = createContext<{

@@ -40,11 +40,18 @@ export const api = {
   },
   playbooks: {
     list: () => request<{ id: string; title: string; type: string; steps: string[]; lastUsedAt: string | null; suggestedByAi: boolean; createdAt: string }[]>('/playbooks'),
-    create: (data: { title: string; type: string; steps?: string[] }) => request('/playbooks', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: { title?: string; type?: string; steps?: string[] }) => request(`/playbooks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    create: (data: { title: string; type: string; steps?: string[]; suggestedByAi?: boolean }) => request('/playbooks', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { title?: string; type?: string; steps?: string[]; lastUsedAt?: string }) => request(`/playbooks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    aiSuggest: () => request<{ playbooks: { title: string; steps: string[] }[]; explanation: string }>('/playbooks/ai-suggest', { method: 'POST' }),
   },
   tasks: {
-    list: (status?: string) => request<{ id: string; title: string; status: string; type: string; goalId?: string; nextStep?: string; top3Candidate: boolean; createdAt: string }[]>(`/tasks${status ? `?status=${status}` : ''}`),
+    list: (params?: { status?: string; type?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set('status', params.status);
+      if (params?.type) q.set('type', params.type);
+      const query = q.toString();
+      return request<{ id: string; title: string; status: string; type: string; goalId?: string; nextStep?: string; top3Candidate: boolean; createdAt: string }[]>(`/tasks${query ? `?${query}` : ''}`);
+    },
     top3: () => request<{ id: string; title: string; status: string; nextStep?: string; timeboxMinutes?: number; createdAt: string }[]>('/tasks/top3'),
     create: (data: { title: string; goalId?: string; type?: string; nextStep?: string }) => request('/tasks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: { status?: string; nextStep?: string; top3Candidate?: boolean; pausedUntil?: string }) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
@@ -64,7 +71,15 @@ export const api = {
     helper: (activeTaskId?: string) => request<{ text: string }>(`/daily/helper${activeTaskId ? `?activeTaskId=${activeTaskId}` : ''}`),
   },
   settings: {
-    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean }>('/settings'),
-    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean; reduceMotion: boolean; focusMode: boolean }>('/settings'),
+    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean; reduceMotion?: boolean; focusMode?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  guided: {
+    getSubSteps: (taskId: string) => request<{ steps: string[] }>(`/guided/${taskId}/substeps`),
+  },
+  decisions: {
+    create: (taskId: string, question: string) => request<{ id: string; question: string; options: { label: string; description: string }[] }>('/decisions', { method: 'POST', body: JSON.stringify({ taskId, question }) }),
+    list: (taskId: string) => request<{ id: string; question: string; options: { label: string; description: string }[]; chosenOption: number | null; createdAt: string }[]>(`/decisions?taskId=${taskId}`),
+    choose: (id: string, chosenOption: number) => request<{ id: string; chosenOption: number }>(`/decisions/${id}`, { method: 'PATCH', body: JSON.stringify({ chosenOption }) }),
   },
 };

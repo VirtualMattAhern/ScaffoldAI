@@ -1,0 +1,82 @@
+.landing-page {
+  min-height: 100vh;
+  background: var(--skafold-blue-50);
+}
+
+.landing-hero {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+}
+
+.landing-hero-content {
+  text-align: center;
+  max-width: 560px;
+}
+
+.landing-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.landing-mascot {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.landing-logo {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--skafold-blue-700);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.landing-tagline {
+  font-size: 1.125rem;
+  color: var(--skafold-slate-600);
+  line-height: 1.6;
+  margin: 0 0 2rem;
+}
+
+.landing-get-started {
+  padding: 0.875rem 2rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--skafold-blue-700);
+  border: none;
+  border-radius: var(--skafold-radius);
+  cursor: pointer;
+  box-shadow: var(--skafold-shadow-md);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.landing-get-started:hover {
+  background: var(--skafold-blue-900);
+  transform: translateY(-1px);
+}
+
+.landing-signin {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.landing-signin .onboarding-card {
+  margin: 0;
+}
+
+.landing-signin h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--skafold-slate-800);
+}

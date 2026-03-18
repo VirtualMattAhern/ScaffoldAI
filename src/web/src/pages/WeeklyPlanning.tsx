@@ -19,13 +19,24 @@ export function WeeklyPlanning() {
   const [converting, setConverting] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [helperMessage, setHelperMessage] = useState<string | null>(null);
+  const [quickAdd, setQuickAdd] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('');
+
+  const loadTasks = () => {
+    const params: { status?: string; type?: string } = {};
+    if (filterStatus) params.status = filterStatus;
+    if (filterType) params.type = filterType;
+    return api.tasks.list(Object.keys(params).length ? params : undefined);
+  };
 
   useEffect(() => {
-    Promise.all([api.brainDump.get(), api.tasks.list()]).then(([dump, taskList]) => {
+    setLoading(true);
+    Promise.all([api.brainDump.get(), loadTasks()]).then(([dump, taskList]) => {
       setBrainDump(dump.rawText);
       setTasks(taskList);
     }).finally(() => setLoading(false));
-  }, []);
+  }, [filterStatus, filterType]);
 
   const handleSaveDump = () => {
     api.brainDump.save(brainDump);
@@ -37,7 +48,7 @@ export function WeeklyPlanning() {
     try {
       await api.brainDump.save(brainDump);
       const result = await api.brainDump.convert();
-      const taskList = await api.tasks.list();
+      const taskList = await loadTasks();
       setTasks(taskList);
       if (result.explanation) setHelperMessage(result.explanation);
     } catch (err) {
@@ -52,7 +63,7 @@ export function WeeklyPlanning() {
     setHelperMessage(null);
     try {
       const result = await api.tasks.aiSuggestTop3();
-      const taskList = await api.tasks.list();
+      const taskList = await loadTasks();
       setTasks(taskList);
       if (result.explanation) setHelperMessage(result.explanation);
     } catch (err) {
@@ -60,6 +71,25 @@ export function WeeklyPlanning() {
     } finally {
       setSuggesting(false);
     }
+  };
+
+  const handleQuickAdd = async () => {
+    const title = quickAdd.trim();
+    if (!title) return;
+    setQuickAdd('');
+    try {
+      const task = await api.tasks.create({ title, type: 'one_off' }) as Task;
+      setTasks((prev) => [...prev, task]);
+    } catch (err) {
+      setHelperMessage(err instanceof Error ? err.message : 'Failed to add task');
+    }
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    try {
+      await api.tasks.update(id, { status: 'done' });
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    } catch {}
   };
 
   if (loading) return <div className="screen-loading">Loading…</div>;
@@ -89,7 +119,37 @@ export function WeeklyPlanning() {
 
       <section className="task-list">
         <h2>Weekly Task List</h2>
-        <p className="subtitle">Scrollable / filterable list — open items sorted to top</p>
+        <p className="subtitle">Filter by status or type — open items sorted to top</p>
+
+        <div className="task-filters" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <label>
+            Status:
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{ marginLeft: '0.5rem', padding: '0.35rem 0.5rem', borderRadius: 'var(--skafold-radius-sm)', border: '1px solid var(--skafold-slate-200)' }}
+            >
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="paused">Paused</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label>
+            Type:
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              style={{ marginLeft: '0.5rem', padding: '0.35rem 0.5rem', borderRadius: 'var(--skafold-radius-sm)', border: '1px solid var(--skafold-slate-200)' }}
+            >
+              <option value="">All</option>
+              <option value="one_off">One-off</option>
+              <option value="repeat">Repeat</option>
+              <option value="playbook">Playbook</option>
+            </select>
+          </label>
+        </div>
 
         {tasks.length === 0 ? (
           <div className="empty-state">
@@ -104,15 +164,17 @@ export function WeeklyPlanning() {
                 <th>Status</th>
                 <th>Top 3</th>
                 <th>Type</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} className={t.status === 'done' ? 'task-done' : ''}>
                   <td>{t.title}</td>
-                  <td>{t.status}</td>
-                  <td>{t.top3Candidate ? '*' : ''}</td>
-                  <td>{t.type}</td>
+                  <td><span className={`status-badge status-${t.status}`} title={`Status: ${t.status.replace('_', ' ')}`}>{t.status.replace('_', ' ')}</span></td>
+                  <td title={t.top3Candidate ? 'Marked as Top 3 for today' : 'Not in Top 3'}>{t.top3Candidate ? '★' : ''}</td>
+                  <td title={`Task type: ${t.type.replace('_', ' ')}`}>{t.type.replace('_', ' ')}</td>
+                  <td><button className="delete-btn" onClick={() => handleDeleteTask(t.id)} title="Delete">×</button></td>
                 </tr>
               ))}
             </tbody>
@@ -121,8 +183,14 @@ export function WeeklyPlanning() {
 
         <div className="actions-row">
           <div className="quick-add">
-            <input type="text" placeholder="Add idea…" />
-            <button>Add</button>
+            <input
+              type="text"
+              placeholder="Add idea…"
+              value={quickAdd}
+              onChange={(e) => setQuickAdd(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && quickAdd.trim()) handleQuickAdd(); }}
+            />
+            <button onClick={handleQuickAdd} disabled={!quickAdd.trim()}>Add</button>
           </div>
           <button onClick={handleSuggestTop3} disabled={suggesting || tasks.length === 0}>
             {suggesting ? 'Suggesting…' : 'AI Suggest Top 3'}

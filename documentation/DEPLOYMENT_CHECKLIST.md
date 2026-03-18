@@ -1,6 +1,6 @@
 # SkafoldAI Production Deployment Checklist
 
-**Last updated:** 2026-03-15 UTC
+**Last updated:** 2026-03-18 UTC
 
 This document tracks deployment progress and open steps. Use it as a reference for what's done and what remains.
 
@@ -10,132 +10,147 @@ This document tracks deployment progress and open steps. Use it as a reference f
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Step 1: App Service (API) | ⬜ **BLOCKED** | Quota exhausted in eastus/westus |
-| Step 2: AZURE_OPENAI_API_KEY | ⬜ Pending | Add in Portal after Step 1 |
-| Step 3: Static Web App | ⬜ In progress | GitHub device auth required |
-| Step 4: DNS (GoDaddy) | ⬜ Your action | Steps documented below |
-| Step 5: Entra ID | ✅ Code ready | Azure setup steps below |
+| **SQL** | ✅ Done | skafoldai-sql-cus (Central US), data migrated from West |
+| **API** | ✅ Container App | skafoldai-api in skafoldai-env |
+| **Web** | ✅ Container App | skafoldai-web in skafoldai-env |
+| **Legacy** | ✅ Decommissioned | App Service + Static Web App removed |
+| **CI/CD** | ✅ GitHub Actions | `.github/workflows/azure-container-apps-deploy.yml` |
+| **Monitoring** | ✅ Script ready | Run `.\scripts\azure-monitoring-setup.ps1` |
+| **Managed Identity** | ✅ Script ready | Run `.\scripts\azure-managed-identity-acr.ps1` |
+| **Entra ID** | ✅ Script ready | Run `.\scripts\azure-entra-config.ps1` with your IDs |
+| **DNS** | ⚠️ Update needed | Point api/www to Container App FQDNs (see below) |
 
 ---
 
-## What We've Done
+## Current URLs (Working)
 
-### Codebase
-- [x] Production deployment script (`scripts/azure-production-deploy.ps1`) — uses skafoldai-rg, skafoldai-openai
-- [x] Entra ID integration in frontend (MSAL React) — optional when `VITE_ENTRA_CLIENT_ID` is set
-- [x] Entra ID token validation in API — optional when `ENTRA_TENANT_ID` + `ENTRA_CLIENT_ID` are set
-- [x] Dual auth support — email (legacy) + Entra (production)
-- [x] GitHub Actions workflow for API deploy (`.github/workflows/azure-api-deploy.yml`)
-
-### Documentation
-- [x] [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) — full deployment guide
-- [x] [Azure Highlevel Structure.txt](Azure%20Highlevel%20Structure.txt) — resource naming, domain mapping
-- [x] This checklist
-
-### Azure (Existing)
-- [x] skafoldai-rg (SkafoldAI-Prod subscription)
-- [x] skafoldai-db, skafoldai-sql-wus, skafoldai-kv
-- [x] skafoldai-openai, skafoldai-insights, skafoldai-logs, skafoldaistorage
+| Resource | URL |
+|----------|-----|
+| **API (default)** | https://skafoldai-api.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io |
+| **API health** | https://skafoldai-api.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io/api/health |
+| **Web (default)** | https://skafoldai-web.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io |
 
 ---
 
-## Step 1: Create App Service (API) — BLOCKED
+## Custom Domains — www.skafoldai.com ✅ Fixed
 
-**Issue:** App Service quota exhausted in eastus and westus for SkafoldAI-Prod.
+**www.skafoldai.com** was returning 404 because the custom domain was not bound. Fixed by:
+1. Adding hostname: `az containerapp hostname add -n skafoldai-web -g skafoldai-rg --hostname www.skafoldai.com`
+2. Creating managed cert: `az containerapp env certificate create ... --hostname www.skafoldai.com --validation-method CNAME`
+3. Binding when cert succeeded: `az containerapp hostname bind ... --hostname www.skafoldai.com --certificate cert-www-skafoldai`
 
-**What you need to do:**
-1. Go to [Azure Portal](https://portal.azure.com) → **Subscriptions** → **SkafoldAI-Prod**
-2. **Usage + quotas** → search **Microsoft.Web** (or "App Service")
-3. Request quota increase for your region (e.g., East US, West US)
-4. Or try another region: `.\scripts\azure-production-deploy.ps1 -Region centralus`
+**api.skafoldai.com** — ✅ Bound (2026-03-13). Cert `cert-api-skafoldai` bound; API reachable at https://api.skafoldai.com/api/health
 
-**After quota is available, run:**
+---
+
+## DNS Update Required (GoDaddy)
+
+**api.skafoldai.com** and **www.skafoldai.com** currently point to the old App Service / Static Web App (deleted). Update to Container Apps:
+
+| Type | Name | Old Value | New Value |
+|------|------|-----------|-----------|
+| **CNAME** | api | ~~skafoldai-api.azurewebsites.net~~ | **skafoldai-api.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io** |
+| **TXT** | asuid.api | 5E10D7B594E68E897ECAF25D3AF8DBBA90CC789BE27DFC08E408C61030C72EC9 | (keep) |
+| **CNAME** | www | ~~white-mushroom-02850580f.2.azurestaticapps.net~~ | **skafoldai-web.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io** |
+| **TXT** | asuid.www | *(add if missing)* | 5E10D7B594E68E897ECAF25D3AF8DBBA90CC789BE27DFC08E408C61030C72EC9 |
+
+1. Go to [GoDaddy DNS](https://dcc.godaddy.com/) → **skafoldai.com** → **DNS**
+2. Edit the **api** CNAME → change value to `skafoldai-api.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io`
+3. Edit the **www** CNAME → change value to `skafoldai-web.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io`
+4. Add **asuid.www** TXT if you get validation errors for www
+5. Save — DNS can take 5–60 minutes to propagate
+
+### After DNS Propagates: Add Custom Domains + Managed Certs
+
 ```powershell
-az account set --subscription "SkafoldAI-Prod"
-.\scripts\azure-production-deploy.ps1 -OpenAIKey "<your-openai-key>"
+# API
+az containerapp env certificate create -g skafoldai-rg -n skafoldai-env --certificate-name cert-api --hostname api.skafoldai.com --validation-method CNAME
+az containerapp hostname bind -g skafoldai-rg -n skafoldai-api --hostname api.skafoldai.com --environment skafoldai-env --certificate cert-api
+
+# Web (after asuid.www TXT exists)
+az containerapp hostname add -n skafoldai-web -g skafoldai-rg --hostname www.skafoldai.com
+az containerapp env certificate create -g skafoldai-rg -n skafoldai-env --certificate-name cert-www --hostname www.skafoldai.com --validation-method CNAME
+az containerapp hostname bind -g skafoldai-rg -n skafoldai-web --hostname www.skafoldai.com --environment skafoldai-env --certificate cert-www
 ```
 
 ---
 
-## Step 2: Add AZURE_OPENAI_API_KEY
+## CI/CD (GitHub Actions)
 
-**When:** After Step 1 (skafoldai-api exists).
-
-**Steps:**
-1. Azure Portal → **skafoldai-api** (App Service)
-2. **Settings** → **Configuration** → **Application settings**
-3. **+ New application setting**
-   - Name: `AZURE_OPENAI_API_KEY`
-   - Value: Key 1 from **skafoldai-openai** → Keys and Endpoint
-4. **Save**
+**Service principal created.** Add **AZURE_CREDENTIALS** secret — see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for one-step command or UI steps.
 
 ---
 
-## Step 3: Create Static Web App
+## Monitoring
 
-**Status:** Command was run; GitHub device auth may be pending.
+Run once to create Log Analytics + App Insights and link to Container Apps:
 
-**If you saw a device code prompt:**
-1. Go to https://github.com/login/device
-2. Enter the code shown (e.g., D003-3FC6)
-3. Authorize Azure to access your GitHub
-4. The `az staticwebapp create` command will complete
-
-**Or create manually:**
-1. Azure Portal → **Create a resource** → **Static Web App**
-2. **Resource group:** skafoldai-rg
-3. **Name:** skafoldai-web
-4. **Deploy:** Source = GitHub → authorize → repo: VirtualMattAhern/ScaffoldAI, branch: main
-5. **Build preset:** Custom
-6. **App location:** `src/web`
-7. **Output location:** `dist`
-8. **Api location:** *(empty)*
-9. Create
-
-**GitHub secret for build:**
-- Repo → Settings → Secrets → **VITE_API_URL** = `https://skafoldai-api.azurewebsites.net/api` (or `https://api.skafoldai.com/api` after DNS)
+```powershell
+.\scripts\azure-monitoring-setup.ps1
+```
 
 ---
 
-## Step 4: DNS (GoDaddy) — Your Action
+## Managed Identity for ACR
 
-**When:** After skafoldai-web and skafoldai-api exist and custom domains are added in Azure.
+Run once to switch from ACR admin credentials to managed identity for image pull:
 
-### 4a. Add Custom Domains in Azure
+```powershell
+.\scripts\azure-managed-identity-acr.ps1
+```
 
-**Static Web App (www.skafoldai.com):**
-1. skafoldai-web → **Custom domains** → **+ Add**
-2. Domain: `www.skafoldai.com`
-3. Note the CNAME target (e.g., `xxx.azurestaticapps.net`)
+---
 
-**App Service (api.skafoldai.com):**
-1. skafoldai-api → **Custom domains** → **+ Add custom domain**
-2. Domain: `api.skafoldai.com`
-3. Note CNAME target: `skafoldai-api.azurewebsites.net`
+## Entra ID (Microsoft Sign-in)
 
-### 4b. Configure DNS in GoDaddy
+✅ **API configured.** Client ID `5b66d72f-e8e0-46fb-b90d-edb27c3b07d2`, Tenant ID `8e6d83f9-fbb3-46e9-9f63-ef2ccb6766df`.
 
-1. Go to [GoDaddy DNS](https://dcc.godaddy.com/) → select **skafoldai.com** → **DNS**
-2. Add/update records:
+**To enable "Sign in with Microsoft" on the frontend (secure, standard approach):**
+```powershell
+# From repo root, with gh CLI installed and authenticated
+.\scripts\github-secrets-entra.ps1
+```
+This adds `VITE_ENTRA_CLIENT_ID` and `VITE_ENTRA_TENANT_ID` to GitHub Secrets (encrypted, never logged). The next deploy will bake them into the web build.
 
-| Type | Name | Value | TTL |
-|------|------|-------|-----|
-| CNAME | www | `<value from Static Web App>` | 600 |
-| CNAME | api | skafoldai-api.azurewebsites.net | 600 |
+---
 
-3. (Optional) Root `skafoldai.com` → CNAME to www or A record for redirect
-4. **Save** — DNS can take 5–60 minutes to propagate
+## Architecture Summary
 
-### 4c. SSL in Azure
+| Resource | Name | Region |
+|----------|------|--------|
+| Resource Group | skafoldai-rg | — |
+| SQL Server | skafoldai-sql-cus | Central US |
+| Database | skafoldai-db | — |
+| ACR | skafoldaiacr | Central US |
+| Container Apps Env | skafoldai-env | Central US |
+| API Container App | skafoldai-api | Central US |
+| Web Container App | skafoldai-web | Central US |
+| Key Vault | skafoldai-kv | — |
+| OpenAI | skafoldai-openai | — |
 
-- **Static Web App:** Managed cert is automatic when domain validates
-- **App Service:** Custom domains → api.skafoldai.com → **Add binding** → **SNI SSL** (free)
+---
 
-### 4d. Update CORS and VITE_API_URL
+## Deploy Latest to Production (Landing Page, UI, Entra)
 
-1. skafoldai-api → Configuration → `CORS_ORIGINS` = `https://www.skafoldai.com,https://skafoldai.com`
-2. GitHub secret `VITE_API_URL` = `https://api.skafoldai.com/api`
-3. Trigger new frontend build (push to main or redeploy)
+The landing page (Skafold logo + mascot), calming blue UI, and "Sign in with Microsoft" require a fresh deploy.
+
+1. **Add Entra secrets** (one-time): `.\scripts\github-secrets-entra.ps1`
+2. **Push to main** (or trigger workflow manually: Actions → Deploy to Azure Container Apps → Run workflow)
+3. **Wait** ~5–10 min for build + deploy. Visit https://www.skafoldai.com
+
+---
+
+## Redeploy / Update Images (Manual)
+
+```powershell
+# API
+az acr build --registry skafoldaiacr --image skafoldai-api:latest --no-wait src/api
+az containerapp update -n skafoldai-api -g skafoldai-rg --image skafoldaiacr.azurecr.io/skafoldai-api:latest
+
+# Web (VITE_API_URL for production)
+az acr build --registry skafoldaiacr --image skafoldai-web:latest --build-arg VITE_API_URL=https://api.skafoldai.com/api --no-wait src/web
+az containerapp update -n skafoldai-web -g skafoldai-rg --image skafoldaiacr.azurecr.io/skafoldai-web:latest
+```
 
 ---
 
@@ -148,15 +163,12 @@ az account set --subscription "SkafoldAI-Prod"
 1. Go to [Microsoft Entra admin center](https://entra.microsoft.com)
 2. **Applications** → **App registrations** → **New registration**
 3. **Name:** SkafoldAI
-4. **Supported account types:** Choose one:
-   - "Accounts in this organizational directory only" (single tenant)
-   - "Accounts in any organizational directory and personal Microsoft accounts" (broader)
+4. **Supported account types:** Choose one (single tenant or broader)
 5. **Redirect URI:** Platform = **Single-page application (SPA)**
    - Add: `https://www.skafoldai.com`
-   - Add: `https://skafoldai-web.azurestaticapps.net`
+   - Add: `https://skafoldai-web.wonderfulhill-b35e6c76.centralus.azurecontainerapps.io`
    - Add: `http://localhost:5173` (dev)
-6. **Register**
-7. Note: **Application (client) ID**, **Directory (tenant) ID**
+6. **Register** — note **Application (client) ID**, **Directory (tenant) ID**
 
 ### 5b. API Permissions
 
@@ -166,44 +178,21 @@ az account set --subscription "SkafoldAI-Prod"
 
 ### 5c. Frontend Environment Variables
 
-Add to `src/web/.env.production` (or GitHub secret for build):
+Add to `src/web/.env.production` or build secret:
 ```
 VITE_ENTRA_CLIENT_ID=<your-client-id>
 VITE_ENTRA_TENANT_ID=<your-tenant-id>
 VITE_APP_URL=https://www.skafoldai.com
+VITE_API_URL=https://api.skafoldai.com/api
 ```
 
-For local dev, add to `src/web/.env`:
-```
-VITE_ENTRA_CLIENT_ID=<your-client-id>
-VITE_ENTRA_TENANT_ID=<your-tenant-id>
-VITE_APP_URL=http://localhost:5173
-```
+### 5d. API Environment Variables (Container App)
 
-### 5d. API Environment Variables
+Run: `.\scripts\azure-entra-config.ps1 -EntraTenantId "<tenant-id>" -EntraClientId "<client-id>"`
 
-Add to skafoldai-api App Service Configuration:
-```
-ENTRA_TENANT_ID=<your-tenant-id>
-ENTRA_CLIENT_ID=<your-client-id>
-```
+Or add manually to skafoldai-api → Configuration: `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`
 
-### 5e. Auth Flow
-
-- **With Entra configured:** Landing page shows "Sign in with Microsoft" (and optionally "Sign in with email" for dev)
-- **Without Entra:** Email-only login (current behavior)
-
----
-
-## Quick Reference
-
-| Resource | URL |
-|----------|-----|
-| Frontend (prod) | https://www.skafoldai.com |
-| API (prod) | https://api.skafoldai.com |
-| API health | https://api.skafoldai.com/api/health |
-| Static Web App (default) | https://skafoldai-web.azurestaticapps.net |
-| App Service (default) | https://skafoldai-api.azurewebsites.net |
+**Multi-app setup:** See [ENTRA_ID_MULTI_APP_SETUP.md](ENTRA_ID_MULTI_APP_SETUP.md) — one app registration per product (SkafoldAI, BidBudAI, RezAGI); each isolated.
 
 ---
 
@@ -211,8 +200,8 @@ ENTRA_CLIENT_ID=<your-client-id>
 
 | Issue | Fix |
 |-------|-----|
-| App Service quota | Request in Usage + quotas; try centralus |
-| Static Web App GitHub auth | Complete device flow at github.com/login/device |
-| API 401 / CORS | Add frontend URL to CORS_ORIGINS |
+| api.skafoldai.com 503 | DNS still points to old App Service; update CNAME to Container App FQDN |
+| API ConnectionPool error | Fixed in client.ts (createRequire for mssql ESM interop) |
+| azure-schema.sql missing | Build script copies it; ensure `npm run build` runs in Docker |
+| CORS errors | Add frontend URL to CORS_ORIGINS in API Container App |
 | Entra redirect mismatch | Redirect URI in Entra must match exactly |
-| DNS not resolving | Wait up to 48h; use `nslookup www.skafoldai.com` |

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import './Layout.css';
@@ -7,17 +7,21 @@ export function Layout() {
   const { settings } = useSettings();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDaily = location.pathname === '/daily' || location.pathname.endsWith('/daily');
 
   const handleSignOut = () => {
     logout();
     navigate('/landing', { replace: true });
   };
 
+  const showHeader = !settings.focusMode || !isDaily;
   return (
     <div
-      className={`layout ${settings.highContrast ? 'high-contrast' : ''} ${settings.dyslexiaFont ? 'dyslexia-font' : ''}`}
+      className={`layout ${settings.highContrast ? 'high-contrast' : ''} ${settings.dyslexiaFont ? 'dyslexia-font' : ''} ${settings.reduceMotion ? 'reduce-motion' : ''}`}
       style={{ fontSize: `${settings.fontSizePercent}%` }}
     >
+      {showHeader && (
       <header className="layout-header">
         <span className="brand">SkafoldAI</span>
         <nav className="horizon-switcher" aria-label="Planning horizons">
@@ -39,6 +43,7 @@ export function Layout() {
           <button type="button" onClick={handleSignOut} className="sign-out-btn">Sign out</button>
         </div>
       </header>
+      )}
       <main className="layout-main">
         <Outlet />
       </main>

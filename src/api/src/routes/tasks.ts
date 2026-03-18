@@ -26,10 +26,11 @@ function mapTask(row: Record<string, unknown>) {
 
 tasksRouter.get('/', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
-  const { status } = req.query;
+  const { status, type } = req.query;
   let sql = 'SELECT * FROM tasks WHERE user_id = ?';
   const params: (string | number)[] = [userId];
   if (status) { sql += ' AND status = ?'; params.push(status as string); }
+  if (type) { sql += ' AND type = ?'; params.push(type as string); }
   sql += ' ORDER BY top3_candidate DESC, created_at ASC';
   const db = await getDb();
   const rows = await db.all<Record<string, unknown>>(sql, params);

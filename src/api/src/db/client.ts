@@ -34,7 +34,9 @@ function parseConnectionString(url: string): Record<string, string | boolean> {
 }
 
 async function createMssqlClient(): Promise<DbClient> {
-  const sql = await import('mssql');
+  const { createRequire } = await import('module');
+  const require = createRequire(import.meta.url);
+  const sql = require('mssql');
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error('DATABASE_URL required for Azure SQL');
   const parsed = parseConnectionString(url);

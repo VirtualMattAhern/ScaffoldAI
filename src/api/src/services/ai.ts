@@ -230,3 +230,124 @@ Match the tasks' domain. No generic inventory/sales language unless the tasks ar
 
   return content || (taskTitles.length > 0 ? 'Start with the first task.' : 'Add tasks in Weekly Planning.');
 }
+
+export async function generateSubSteps(taskTitle: string): Promise<string[]> {
+  if (!isConfigured()) {
+    return ['Start working on this task', 'Focus on the most important part first', 'Review and wrap up'];
+  }
+
+  const systemPrompt = `You break down a business task into 3-5 actionable sub-steps.
+Given a task title, output a JSON array of strings — each is a clear, concrete sub-step.
+Keep steps specific to the task domain. Each step should take 5-15 minutes.
+Output ONLY a valid JSON array of strings, no markdown or extra text.`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Break down this task into sub-steps: ${taskTitle}` },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as string[];
+    return Array.isArray(parsed) ? parsed : ['Start working on this task', 'Focus on the most important part first', 'Review and wrap up'];
+  } catch {
+    return ['Start working on this task', 'Focus on the most important part first', 'Review and wrap up'];
+  }
+}
+
+/**
+ * Suggest playbooks from completed task patterns.
+ * Analyzes done tasks and suggests reusable playbooks.
+ */
+export async function suggestPlaybooksFromTasks(
+  tasks: { id: string; title: string; type: string; completedAt: string | null }[]
+): Promise<{ playbooks: { title: string; steps: string[] }[]; explanation: string }> {
+  if (!isConfigured()) {
+    return {
+      playbooks: [],
+      explanation: 'Azure OpenAI not configured. Add your keys to src/api/.env',
+    };
+  }
+
+  const doneTasks = tasks
+    .filter((t) => t.completedAt)
+    .sort((a, b) => (a.completedAt ?? '').localeCompare(b.completedAt ?? ''))
+    .slice(-50); // last 50 completed
+
+  if (doneTasks.length < 3) {
+    return {
+      playbooks: [],
+      explanation: 'Complete more tasks to detect patterns. I need at least 3 completed tasks to suggest playbooks.',
+    };
+  }
+
+  const systemPrompt = `You help a business owner turn repeated task patterns into reusable playbooks.
+Given a list of completed tasks (with title, type, completion order), identify 1-3 workflows that repeat.
+For each pattern, output a playbook with:
+- "title": short name (e.g., "Weekly inventory check")
+- "steps": array of 3-6 concrete steps (each a clear action)
+
+Output a JSON object:
+- "playbooks": array of { "title": string, "steps": string[] }
+- "explanation": 1-2 sentences in plain language explaining what patterns you found
+
+Keep steps specific and actionable. Output ONLY valid JSON, no markdown.`;
+
+  const taskList = doneTasks.map((t) => `title: ${t.title}, type: ${t.type}`).join('\n');
+  const userPrompt = `Completed tasks (most recent last):\n${taskList}`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { playbooks?: { title: string; steps: string[] }[]; explanation?: string };
+    const playbooks = Array.isArray(parsed.playbooks)
+      ? parsed.playbooks.filter((p) => p?.title && Array.isArray(p.steps))
+      : [];
+    return {
+      playbooks,
+      explanation: parsed.explanation ?? 'I found some patterns in your completed tasks.',
+    };
+  } catch {
+    return { playbooks: [], explanation: content || 'Could not parse suggestions.' };
+  }
+}
+
+export async function generateDecisionOptions(taskTitle: string, question: string): Promise<{ label: string; description: string }[]> {
+  if (!isConfigured()) {
+    return [
+      { label: 'Conservative', description: 'Lower risk, steady progress — play it safe for now' },
+      { label: 'Balanced', description: 'Moderate risk — a good middle ground' },
+      { label: 'Bold', description: 'Higher risk, faster progress — go for it' },
+    ];
+  }
+
+  const systemPrompt = `You help a business owner make a decision by simplifying it into exactly 3 clear options.
+Given a task and a decision question, output a JSON array of exactly 3 objects with:
+- "label": short name for the option (2-4 words)
+- "description": one sentence explaining this option and its trade-offs
+
+Keep options concrete, specific to the task. Avoid generic advice.
+Output ONLY valid JSON array, no markdown.`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Task: ${taskTitle}\nDecision: ${question}` },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { label: string; description: string }[];
+    return Array.isArray(parsed) && parsed.length >= 3 ? parsed.slice(0, 3) : [
+      { label: 'Option A', description: 'Conservative approach' },
+      { label: 'Option B', description: 'Balanced approach' },
+      { label: 'Option C', description: 'Bold approach' },
+    ];
+  } catch {
+    return [
+      { label: 'Option A', description: 'Conservative approach' },
+      { label: 'Option B', description: 'Balanced approach' },
+      { label: 'Option C', description: 'Bold approach' },
+    ];
+  }
+}

@@ -1,13 +1,16 @@
 # SkafoldAI Production Deployment - Create App Service + Static Web App
+# PREFER: scripts/azure-container-apps-deploy.ps1 for Container Apps (per structure)
 # Run after: az login, az account set --subscription "SkafoldAI-Prod"
 # Prerequisites: Resource group, skafoldai-openai (or skafoldai-ai), skafoldai-db exist
+# IMPORTANT: SqlServerName MUST be in same region as API (e.g. skafoldai-sql-eus for East). Do NOT use -wus with API in East.
 
 param(
     [string]$SubscriptionName = "SkafoldAI-Prod",
     [string]$ResourceGroup = "skafoldai-rg",  # Use skafoldai-rg for existing; rg-skafoldai-prod for new
     [string]$Region = "eastus",
     [string]$OpenAIKey = "",
-    [string]$OpenAIName = "skafoldai-openai"  # Your Azure OpenAI resource name (skafoldai-openai or skafoldai-ai)
+    [string]$OpenAIName = "skafoldai-openai",  # Your Azure OpenAI resource name (skafoldai-openai or skafoldai-ai)
+    [string]$SqlServerName = "skafoldai-sql-cus"  # Central US (East unavailable). -cus = Central, -eus = East.
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +31,7 @@ az webapp config set --name skafoldai-api --resource-group $ResourceGroup --star
 
 # Get SQL password and build DATABASE_URL
 $sqlPwd = az keyvault secret show --vault-name skafoldai-kv --name SqlAdminPassword --query value -o tsv 2>$null
-$dbUrl = "Server=tcp:skafoldai-sql-wus.database.windows.net,1433;Database=skafoldai-db;User ID=skafoldaiadmin;Password=$sqlPwd;Encrypt=true;TrustServerCertificate=false;"
+$dbUrl = "Server=tcp:${SqlServerName}.database.windows.net,1433;Database=skafoldai-db;User ID=skafoldaiadmin;Password=$sqlPwd;Encrypt=true;TrustServerCertificate=false;"
 
 Write-Host "`n=== Configuring API settings ===" -ForegroundColor Cyan
 az webapp config appsettings set --name skafoldai-api --resource-group $ResourceGroup --settings `

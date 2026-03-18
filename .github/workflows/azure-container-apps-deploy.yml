@@ -1,0 +1,90 @@
+# Deploy API and Web to Azure Container Apps
+# Builds images in ACR, updates Container Apps on push to main
+#
+# Required GitHub secrets:
+#   AZURE_CREDENTIALS - JSON: {"clientId":"<appId>","clientSecret":"<password>","tenantId":"<tenant>","subscriptionId":"<sub-id>"}
+#   VITE_ENTRA_CLIENT_ID - Entra app client ID (for "Sign in with Microsoft")
+#   VITE_ENTRA_TENANT_ID - Entra tenant ID
+# Run: .\scripts\github-secrets-entra.ps1 to add Entra secrets
+
+name: Deploy to Azure Container Apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/api/**'
+      - 'src/web/**'
+      - '.github/workflows/azure-container-apps-deploy.yml'
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: skafoldai-rg
+  ACR_NAME: skafoldaiacr
+  API_APP: skafoldai-api
+  WEB_APP: skafoldai-web
+  VITE_API_URL: https://api.skafoldai.com/api
+  VITE_ENTRA_CLIENT_ID: ${{ secrets.VITE_ENTRA_CLIENT_ID }}
+  VITE_ENTRA_TENANT_ID: ${{ secrets.VITE_ENTRA_TENANT_ID }}
+  VITE_APP_URL: https://www.skafoldai.com
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set subscription
+        run: az account set --subscription "SkafoldAI-Prod"
+
+      - name: Build and push API image
+        run: |
+          az acr build --registry ${{ env.ACR_NAME }} \
+            --image skafoldai-api:${{ github.sha }} \
+            --image skafoldai-api:latest \
+            --file src/api/Dockerfile \
+            ./src/api
+
+      - name: Build and push Web image
+        run: |
+          az acr build --registry ${{ env.ACR_NAME }} \
+            --image skafoldai-web:${{ github.sha }} \
+            --image skafoldai-web:latest \
+            --build-arg VITE_API_URL=${{ env.VITE_API_URL }} \
+            --build-arg VITE_ENTRA_CLIENT_ID=${{ env.VITE_ENTRA_CLIENT_ID }} \
+            --build-arg VITE_ENTRA_TENANT_ID=${{ env.VITE_ENTRA_TENANT_ID }} \
+            --build-arg VITE_APP_URL=${{ env.VITE_APP_URL }} \
+            --file src/web/Dockerfile \
+            ./src/web
+
+      - name: Deploy API Container App
+        run: |
+          az containerapp update \
+            --name ${{ env.API_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/skafoldai-api:${{ github.sha }}
+
+      - name: Deploy Web Container App
+        run: |
+          az containerapp update \
+            --name ${{ env.WEB_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/skafoldai-web:${{ github.sha }}
+
+      - name: Output deployment info
+        run: |
+          echo "## Deployment complete" >> $GITHUB_STEP_SUMMARY
+          API_FQDN=$(az containerapp show -n ${{ env.API_APP }} -g ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+          WEB_FQDN=$(az containerapp show -n ${{ env.WEB_APP }} -g ${{ env.AZURE_RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "- API: https://$API_FQDN" >> $GITHUB_STEP_SUMMARY
+          echo "- Web: https://$WEB_FQDN" >> $GITHUB_STEP_SUMMARY

@@ -8,9 +8,12 @@ import { MonthlyPlaybooks } from './pages/MonthlyPlaybooks';
 import { WeeklyPlanning } from './pages/WeeklyPlanning';
 import { DailyRuleOf3 } from './pages/DailyRuleOf3';
 import { Settings } from './pages/Settings';
+import { GuidedMode } from './pages/GuidedMode';
+import { DecisionHelper } from './pages/DecisionHelper';
 import { Onboarding } from './pages/Onboarding';
 import { Landing } from './pages/Landing';
 import { ONBOARDING_DONE_KEY } from './pages/Landing';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
 function AppRoutes() {
@@ -26,10 +29,12 @@ function AppRoutes() {
       <Route path="/onboarding" element={user ? <Onboarding /> : <Navigate to="/landing" replace />} />
       <Route path="/" element={!user ? <Navigate to="/landing" replace /> : hasCompletedOnboarding ? <Layout /> : <Navigate to="/onboarding" replace />}>
         <Route index element={<Navigate to="/daily" replace />} />
-        <Route path="monthly" element={<MonthlyPlaybooks />} />
-        <Route path="weekly" element={<WeeklyPlanning />} />
-        <Route path="daily" element={<DailyRuleOf3 />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="monthly" element={<ErrorBoundary><MonthlyPlaybooks /></ErrorBoundary>} />
+        <Route path="weekly" element={<ErrorBoundary><WeeklyPlanning /></ErrorBoundary>} />
+        <Route path="daily" element={<ErrorBoundary><DailyRuleOf3 /></ErrorBoundary>} />
+        <Route path="settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+        <Route path="guided/:taskId" element={<ErrorBoundary><GuidedMode /></ErrorBoundary>} />
+        <Route path="decision/:taskId" element={<ErrorBoundary><DecisionHelper /></ErrorBoundary>} />
       </Route>
     </Routes>
   );
