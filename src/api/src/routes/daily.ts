@@ -9,6 +9,7 @@ const getUserId = (req: Request & { userId?: string }) => req.userId ?? 'dev-use
 dailyRouter.get('/helper', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const activeTaskId = req.query.activeTaskId as string | undefined;
+  const lowEnergy = req.query.lowEnergy === 'true';
   const db = await getDb();
 
   const tasks = await db.all<{ id: string; title: string; status: string }>(`
@@ -22,7 +23,7 @@ dailyRouter.get('/helper', async (req, res) => {
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
 
   try {
-    const text = await suggestDailyHelper(taskTitles, activeTask?.title);
+    const text = await suggestDailyHelper(taskTitles, activeTask?.title, lowEnergy);
     res.json({ text });
   } catch (err) {
     console.error('Daily helper error:', err);

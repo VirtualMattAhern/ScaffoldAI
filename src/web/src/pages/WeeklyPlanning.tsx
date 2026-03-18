@@ -22,6 +22,7 @@ export function WeeklyPlanning() {
   const [quickAdd, setQuickAdd] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const loadTasks = () => {
     const params: { status?: string; type?: string } = {};
@@ -92,6 +93,26 @@ export function WeeklyPlanning() {
     } catch {}
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkAction = async (status: 'done' | 'paused') => {
+    if (selectedIds.size === 0) return;
+    for (const id of selectedIds) {
+      await api.tasks.update(id, { status });
+    }
+    setTasks((prev) =>
+      status === 'done' ? prev.filter((t) => !selectedIds.has(t.id)) : prev.map((t) => (selectedIds.has(t.id) ? { ...t, status: 'paused' } : t))
+    );
+    setSelectedIds(new Set());
+  };
+
   if (loading) return <div className="screen-loading">Loading…</div>;
 
   return (
@@ -121,6 +142,14 @@ export function WeeklyPlanning() {
         <h2>Weekly Task List</h2>
         <p className="subtitle">Filter by status or type — open items sorted to top</p>
 
+        {selectedIds.size > 0 && (
+          <div className="bulk-actions" style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span>{selectedIds.size} selected</span>
+            <button onClick={() => handleBulkAction('done')}>Mark Done</button>
+            <button onClick={() => handleBulkAction('paused')}>Mark Paused</button>
+            <button onClick={() => setSelectedIds(new Set())}>Clear</button>
+          </div>
+        )}
         <div className="task-filters" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <label>
             Status:
@@ -160,6 +189,7 @@ export function WeeklyPlanning() {
           <table className="task-table">
             <thead>
               <tr>
+                <th>Select</th>
                 <th>Task</th>
                 <th>Status</th>
                 <th>Top 3</th>
@@ -169,7 +199,12 @@ export function WeeklyPlanning() {
             </thead>
             <tbody>
               {tasks.map((t) => (
-                <tr key={t.id} className={t.status === 'done' ? 'task-done' : ''}>
+                <tr key={t.id} className={`${t.status === 'done' ? 'task-done' : ''} ${selectedIds.has(t.id) ? 'selected' : ''}`}>
+                  <td>
+                    {t.status !== 'done' && (
+                      <input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)} aria-label={`Select ${t.title}`} />
+                    )}
+                  </td>
                   <td>{t.title}</td>
                   <td><span className={`status-badge status-${t.status}`} title={`Status: ${t.status.replace('_', ' ')}`}>{t.status.replace('_', ' ')}</span></td>
                   <td title={t.top3Candidate ? 'Marked as Top 3 for today' : 'Not in Top 3'}>{t.top3Candidate ? '★' : ''}</td>

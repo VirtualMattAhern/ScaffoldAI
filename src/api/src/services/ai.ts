@@ -203,7 +203,8 @@ Output ONLY valid JSON.`;
  */
 export async function suggestDailyHelper(
   taskTitles: string[],
-  activeTaskTitle?: string
+  activeTaskTitle?: string,
+  lowEnergy?: boolean
 ): Promise<string> {
   if (!isConfigured()) {
     return taskTitles.length > 0
@@ -211,13 +212,15 @@ export async function suggestDailyHelper(
       : `Add tasks in Weekly Planning, then use AI Suggest Top 3.`;
   }
 
+  const energyHint = lowEnergy ? ' The user indicated low energy — suggest the easiest or quickest task first.' : '';
+
   const systemPrompt = activeTaskTitle
     ? `You give brief, practical guidance for someone working on a specific task.
 Given the task title, write 1-2 sentences of encouragement and a concrete tip. Match the task's domain (e.g., music/creative, retail, admin). No generic inventory/sales advice unless the task is about that.
-Be specific to the task. No fluff.`
+Be specific to the task. No fluff.${energyHint}`
     : `You suggest which task to start first from a list of today's tasks.
 Write 1-2 sentences: which task to start and why (e.g., "Start with X—it unblocks the next step" or "X first, then Y flows naturally").
-Match the tasks' domain. No generic inventory/sales language unless the tasks are about that. Be concrete and reassuring.`;
+Match the tasks' domain. No generic inventory/sales language unless the tasks are about that. Be concrete and reassuring.${energyHint}`;
 
   const userPrompt = activeTaskTitle
     ? `Active task: ${activeTaskTitle}`
@@ -229,6 +232,31 @@ Match the tasks' domain. No generic inventory/sales language unless the tasks ar
   ]);
 
   return content || (taskTitles.length > 0 ? 'Start with the first task.' : 'Add tasks in Weekly Planning.');
+}
+
+/**
+ * Task-scoped chat: in-context AI help for a specific task.
+ */
+export async function taskChat(
+  taskTitle: string,
+  userMessage: string,
+  history: { role: 'user' | 'assistant'; content: string }[] = []
+): Promise<string> {
+  if (!isConfigured()) {
+    return "AI isn't configured. Try breaking the task into smaller steps yourself.";
+  }
+
+  const systemPrompt = `You help someone working on a specific task. They can ask for advice, clarification, or encouragement.
+Task: ${taskTitle}
+Keep responses brief (2-4 sentences). Be concrete and actionable. No fluff.`;
+
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...history.map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+    { role: 'user', content: userMessage },
+  ];
+
+  return chat(messages) || "I'm not sure how to help with that. Try breaking it into smaller steps.";
 }
 
 export async function generateSubSteps(taskTitle: string): Promise<string[]> {

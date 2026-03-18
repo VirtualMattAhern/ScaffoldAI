@@ -21,9 +21,11 @@ export function DailyRuleOf3() {
   const [helperText, setHelperText] = useState('');
   const [undoTask, setUndoTask] = useState<Task | null>(null);
   const [transition, setTransition] = useState(false);
+  const [lowEnergy, setLowEnergy] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helperRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
+  const { settings, updateSettings } = useSettings();
 
   useEffect(() => {
     Promise.all([api.focusSentence.get(), api.tasks.top3()]).then(([fs, taskList]) => {
@@ -33,8 +35,8 @@ export function DailyRuleOf3() {
   }, []);
 
   useEffect(() => {
-    api.daily.helper(activeTaskId ?? undefined).then((r) => setHelperText(r.text)).catch(() => setHelperText(''));
-  }, [tasks, activeTaskId]);
+    api.daily.helper({ activeTaskId: activeTaskId ?? undefined, lowEnergy: !!lowEnergy }).then((r) => setHelperText(r.text)).catch(() => setHelperText(''));
+  }, [tasks, activeTaskId, lowEnergy]);
 
   const handleSaveFocus = () => { api.focusSentence.save(focusSentence); };
 
@@ -112,6 +114,10 @@ export function DailyRuleOf3() {
 
       <section className="focus-sentence">
         <label htmlFor="focus">Focus sentence</label>
+        <label className="low-energy-toggle" style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+          <input type="checkbox" checked={lowEnergy} onChange={(e) => setLowEnergy(e.target.checked)} />
+          Low energy today — suggest easiest first
+        </label>
         <div className="focus-row">
           <input
             id="focus"
@@ -124,7 +130,7 @@ export function DailyRuleOf3() {
         </div>
       </section>
 
-      <section className="top3">
+      <section className="top3" aria-label="Today's top 3 tasks">
         <h2>Today's Top 3</h2>
         {tasks.length === 0 ? (
           <div className="empty-state">
@@ -158,7 +164,7 @@ export function DailyRuleOf3() {
       </section>
 
       {!settings.focusMode && (
-      <section className="helper" ref={helperRef}>
+      <section className="helper" ref={helperRef} aria-live="polite" aria-atomic="true">
         <h3>Your SkafoldAI Helper</h3>
         <p>{helperText || 'Start with the first task.'}</p>
       </section>

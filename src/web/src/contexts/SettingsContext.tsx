@@ -8,6 +8,7 @@ type Settings = {
   dyslexiaFont: boolean;
   reduceMotion: boolean;
   focusMode: boolean;
+  darkMode: boolean;
 };
 
 const defaultSettings: Settings = {
@@ -16,6 +17,7 @@ const defaultSettings: Settings = {
   dyslexiaFont: false,
   reduceMotion: false,
   focusMode: false,
+  darkMode: false,
 };
 
 const SettingsContext = createContext<{

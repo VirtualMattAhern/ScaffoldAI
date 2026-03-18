@@ -1,10 +1,27 @@
 import { Router, Request } from 'express';
 import { getDb } from '../db/client.js';
-import { generateSubSteps } from '../services/ai.js';
+import { generateSubSteps, taskChat } from '../services/ai.js';
 
 export const guidedRouter = Router();
 
 const getUserId = (req: Request & { userId?: string }) => req.userId ?? 'dev-user-001';
+
+guidedRouter.post('/:taskId/chat', async (req, res) => {
+  const userId = getUserId(req as Request & { userId?: string });
+  const { taskId } = req.params;
+  const { message, history } = req.body as { message: string; history?: { role: 'user' | 'assistant'; content: string }[] };
+  const db = await getDb();
+  const task = await db.get<{ title: string }>('SELECT title FROM tasks WHERE id = ? AND user_id = ?', [taskId, userId]);
+  if (!task || !message?.trim()) return res.status(400).json({ error: 'Task not found or message required' });
+
+  try {
+    const reply = await taskChat(task.title, message.trim(), history ?? []);
+    res.json({ reply });
+  } catch (err) {
+    console.error('Task chat error:', err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Chat failed' });
+  }
+});
 
 guidedRouter.get('/:taskId/substeps', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });

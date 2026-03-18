@@ -49,3 +49,35 @@ body {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+
+/* Dark mode */
+.layout.dark-mode {
+  --skafold-bg: #0f172a;
+  --skafold-text: #e2e8f0;
+  --skafold-muted: #94a3b8;
+  --skafold-border: #334155;
+}
+.layout.dark-mode,
+.layout.dark-mode body,
+.layout.dark-mode #root {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+.layout.dark-mode .layout-main,
+.layout.dark-mode .layout-header {
+  background: #1e293b;
+  border-color: #334155;
+}
+.layout.dark-mode .playbook-card,
+.layout.dark-mode .task-card,
+.layout.dark-mode .onboarding-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+.layout.dark-mode input,
+.layout.dark-mode select,
+.layout.dark-mode textarea {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}

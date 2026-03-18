@@ -15,6 +15,10 @@ export function GuidedMode() {
   const [showDonePrompt, setShowDonePrompt] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -22,7 +26,7 @@ export function GuidedMode() {
     Promise.all([
       api.tasks.top3(),
       api.guided.getSubSteps(taskId),
-      api.daily.helper(taskId),
+      api.daily.helper({ activeTaskId: taskId }),
     ]).then(([tasks, stepsRes, helperRes]) => {
       const found = tasks.find((t) => t.id === taskId);
       if (found) {
@@ -67,6 +71,22 @@ export function GuidedMode() {
     if (!taskId) return;
     setPaused(false);
     api.tasks.update(taskId, { status: 'in_progress' });
+  };
+
+  const handleChatSend = async () => {
+    if (!taskId || !chatMessage.trim() || chatLoading) return;
+    const msg = chatMessage.trim();
+    setChatMessage('');
+    setChatHistory((prev) => [...prev, { role: 'user', content: msg }]);
+    setChatLoading(true);
+    try {
+      const { reply } = await api.guided.chat(taskId, msg, chatHistory);
+      setChatHistory((prev) => [...prev, { role: 'assistant', content: reply }]);
+    } catch {
+      setChatHistory((prev) => [...prev, { role: 'assistant', content: 'Sorry, I could not respond.' }]);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   const handleDone = () => {
@@ -134,20 +154,35 @@ export function GuidedMode() {
                   checked={checked[i] ?? false}
                   onChange={() => toggleStep(i)}
                   style={{ width: '1.1rem', height: '1.1rem', cursor: 'pointer' }}
+                  aria-label={`Step ${i + 1}: ${step}`}
                 />
-                <span>{step}</span>
+                <input
+                  type="text"
+                  value={subSteps[i] ?? ''}
+                  onChange={(e) => setSubSteps((prev) => prev.map((s, j) => (j === i ? e.target.value : s)))}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: '1px solid transparent',
+                    padding: '0.25rem',
+                    borderRadius: '4px',
+                    textDecoration: checked[i] ? 'line-through' : 'none',
+                  }}
+                  aria-label={`Edit step ${i + 1}`}
+                />
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="helper">
+      <section className="helper" aria-live="polite" aria-atomic="true">
         <h3>Guidance</h3>
         <p>{helperText || "Focus on the current step. You've got this."}</p>
       </section>
 
       <div className="task-actions" style={{ marginTop: '1.5rem' }}>
+        <button onClick={() => setChatOpen(!chatOpen)}>{chatOpen ? 'Close help' : 'Need more help?'}</button>
         <button onClick={() => navigate(`/decision/${taskId}`)}>Decision</button>
         {paused ? (
           <button onClick={handleResume}>Resume</button>
@@ -157,6 +192,33 @@ export function GuidedMode() {
         <button onClick={handleDone}>Done</button>
         <button onClick={() => navigate('/daily')}>Back to Daily</button>
       </div>
+
+      {chatOpen && (
+        <div className="task-chat-panel" style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--skafold-blue-50)', borderRadius: 'var(--skafold-radius)', border: '1px solid var(--skafold-blue-100)' }}>
+          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>Ask for help</h3>
+          <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '0.5rem' }}>
+            {chatHistory.map((h, i) => (
+              <p key={i} style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: h.role === 'user' ? 'var(--skafold-slate-800)' : 'var(--skafold-slate-600)' }}>
+                <strong>{h.role === 'user' ? 'You' : 'Skafold'}:</strong> {h.content}
+              </p>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+              type="text"
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
+              placeholder="Ask a question about this task…"
+              style={{ flex: 1, padding: '0.5rem', borderRadius: 'var(--skafold-radius-sm)', border: '1px solid var(--skafold-slate-200)' }}
+              disabled={chatLoading}
+            />
+            <button onClick={handleChatSend} disabled={chatLoading || !chatMessage.trim()}>
+              {chatLoading ? '…' : 'Send'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

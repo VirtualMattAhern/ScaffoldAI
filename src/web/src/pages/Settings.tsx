@@ -69,6 +69,18 @@ export function Settings() {
         </label>
         <p className="setting-hint">Hides header, nav, and helper on Daily — just your Top 3 tasks.</p>
       </section>
+
+      <section className="settings-section">
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.darkMode}
+            onChange={(e) => updateSettings({ darkMode: e.target.checked })}
+          />
+          Dark mode
+        </label>
+        <p className="setting-hint">Dark theme for reduced eye strain.</p>
+      </section>
     </div>
   );
 }

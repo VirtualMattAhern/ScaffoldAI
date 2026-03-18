@@ -68,14 +68,21 @@ export const api = {
     suggest: () => request<{ sentence: string }>('/focus-sentence/suggest', { method: 'POST' }),
   },
   daily: {
-    helper: (activeTaskId?: string) => request<{ text: string }>(`/daily/helper${activeTaskId ? `?activeTaskId=${activeTaskId}` : ''}`),
+    helper: (params?: { activeTaskId?: string; lowEnergy?: boolean }) => {
+      const q = new URLSearchParams();
+      if (params?.activeTaskId) q.set('activeTaskId', params.activeTaskId);
+      if (params?.lowEnergy) q.set('lowEnergy', 'true');
+      return request<{ text: string }>(`/daily/helper${q.toString() ? `?${q}` : ''}`);
+    },
   },
   settings: {
-    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean; reduceMotion: boolean; focusMode: boolean }>('/settings'),
-    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean; reduceMotion?: boolean; focusMode?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean; reduceMotion: boolean; focusMode: boolean; darkMode: boolean }>('/settings'),
+    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean; reduceMotion?: boolean; focusMode?: boolean; darkMode?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
   },
   guided: {
     getSubSteps: (taskId: string) => request<{ steps: string[] }>(`/guided/${taskId}/substeps`),
+    chat: (taskId: string, message: string, history?: { role: 'user' | 'assistant'; content: string }[]) =>
+      request<{ reply: string }>(`/guided/${taskId}/chat`, { method: 'POST', body: JSON.stringify({ message, history }) }),
   },
   decisions: {
     create: (taskId: string, question: string) => request<{ id: string; question: string; options: { label: string; description: string }[] }>('/decisions', { method: 'POST', body: JSON.stringify({ taskId, question }) }),
