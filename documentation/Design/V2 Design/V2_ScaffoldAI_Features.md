@@ -1,8 +1,21 @@
 # SkafoldAI — V2 Feature Roadmap
 
-**Last updated:** 2026-03-15 UTC
+**Last updated:** 2026-03-18 UTC
 
 This document outlines the V2 feature roadmap. V2 builds on a stable V1 with deeper AI, richer interactions, and broader accessibility. Items are grouped by theme and prioritized.
+
+---
+
+## V2 Summary — Status at a Glance
+
+| Phase | Status | Delivered | Pending |
+|-------|--------|-----------|---------|
+| **2A** | ✅ Complete | Reduce motion, tooltips, focus mode, last_used_at | — |
+| **2B** | ✅ Complete | Task chat, editable sub-steps, energy-aware | Smart re-prioritization |
+| **2C** | ✅ Mostly complete | Dark mode, bulk actions, ARIA/screen reader | Drag-and-drop, color-coding |
+| **2D** | ⚠️ Partial | PWA, basic API test | Push notifications, full E2E |
+
+**V2 core features are implemented.** Remaining items are lower priority or require additional infrastructure.
 
 ---
 

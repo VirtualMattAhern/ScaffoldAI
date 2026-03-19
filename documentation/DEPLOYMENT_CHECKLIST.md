@@ -77,7 +77,13 @@ az containerapp hostname bind -g skafoldai-rg -n skafoldai-web --hostname www.sk
 
 ## CI/CD (GitHub Actions)
 
-**Service principal created.** Add **AZURE_CREDENTIALS** secret — see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md) for one-step command or UI steps.
+| Secret | Purpose | Status |
+|--------|---------|--------|
+| `AZURE_CREDENTIALS` | Azure login (service principal JSON) | ⚠️ **Required** — deploy fails without this |
+| `VITE_ENTRA_CLIENT_ID` | Entra client ID for frontend | ✅ Added |
+| `VITE_ENTRA_TENANT_ID` | Entra tenant ID for frontend | ✅ Added |
+
+**Deploy failure:** If the workflow fails with `Not all values are present. Ensure 'client-id' and 'tenant-id' are supplied`, add or fix `AZURE_CREDENTIALS` — see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md).
 
 ---
 

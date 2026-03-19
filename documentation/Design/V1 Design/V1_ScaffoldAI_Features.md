@@ -1,8 +1,23 @@
 # SkafoldAI — V1 Feature Summary
 
-**Last updated:** 2026-03-13 UTC
+**Last updated:** 2026-03-18 UTC
 
 This document tracks all V1 features: what has been delivered, what is still pending, and what was deferred to V2.
+
+---
+
+## V1 Summary — Status at a Glance
+
+| Area | Status | Pending |
+|------|--------|---------|
+| **Core screens** | ✅ Complete | — |
+| **Authentication** | ✅ Complete | — |
+| **AI features** | ✅ Complete | — |
+| **Infrastructure** | ✅ Complete | — |
+| **Neurodivergent design** | ✅ Complete | — |
+| **Deployment** | ⚠️ Deploy failing | AZURE_CREDENTIALS secret required for CI/CD |
+
+**V1 is feature-complete.** All planned features are implemented. The Container Apps deploy workflow requires `AZURE_CREDENTIALS` (service principal JSON) in GitHub Secrets to succeed.
 
 ---
 
@@ -103,7 +118,7 @@ SkafoldAI helps a business owner move from ideas to plans to focused action acro
 | Managed identity (ACR) | ✅ Delivered | No admin credentials for image pull |
 | AI-suggested playbooks from task patterns | ✅ Delivered | POST /playbooks/ai-suggest; "AI Suggest Playbooks" on Monthly |
 | Task filtering (by status, type) | ✅ Delivered | API `?status` + `?type`; filter dropdowns on Weekly Planning |
-| Update `last_used_at` when playbook is used | Low | DB column exists; small fix when playbook opened |
+| Update `last_used_at` when playbook is used | ✅ Delivered | Updates when playbook opened (V2 Phase 2A) |
 
 ---
 
@@ -112,9 +127,10 @@ SkafoldAI helps a business owner move from ideas to plans to focused action acro
 | Item | Status | Notes |
 |------|--------|-------|
 | **All core features** | ✅ Complete | Landing, onboarding, Monthly/Weekly/Daily, Guided Mode, Decision Helper, Settings |
-| **Infrastructure** | ✅ Complete | Container Apps, custom domains, certs, CI/CD, Entra API |
-| **Frontend deploy** | ⏳ Pending | Add GitHub secrets + push to main → landing page, blue UI, "Sign in with Microsoft" |
-| **last_used_at** | Low | Deferred to V2 Phase 2A |
+| **Infrastructure** | ✅ Complete | Container Apps, custom domains, certs, Entra API |
+| **last_used_at** | ✅ Complete | Implemented in V2 Phase 2A |
+| **CI/CD deploy** | ⚠️ Blocked | Add `AZURE_CREDENTIALS` secret (service principal JSON) for Azure login |
+| **Entra frontend** | ✅ Ready | `VITE_ENTRA_CLIENT_ID` and `VITE_ENTRA_TENANT_ID` added; will apply on next successful deploy |
 
 ---
 
