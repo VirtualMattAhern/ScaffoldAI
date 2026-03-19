@@ -9,12 +9,20 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Skafold',
-        short_name: 'Skafold',
+        name: 'skafold',
+        short_name: 'skafold',
         description: 'From ideas to plans to focused action.',
-        theme_color: '#2563eb',
-        background_color: '#eff6ff',
+        theme_color: '#0ea5e9',
+        background_color: '#f0f9ff',
         display: 'standalone',
+        icons: [
+          {
+            src: '/brand/skafold-icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+        ],
       },
     }),
   ],

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Screen.css';
-import './Onboarding.css';
 import './Landing.css';
 
 const ONBOARDING_DONE_KEY = (userId: string) => `skafoldai_onboarding_done_${userId}`;
@@ -12,14 +11,8 @@ export function Landing() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithEntra, isEntraEnabled } = useAuth();
   const navigate = useNavigate();
-
-  const handleGetStarted = () => {
-    setShowSignIn(true);
-    document.getElementById('landing-signin')?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,71 +33,122 @@ export function Landing() {
     }
   };
 
-  const { loginWithEntra, isEntraEnabled } = useAuth();
-
   return (
     <div className="landing-page">
-      <section className="landing-hero">
-        <div className="landing-hero-content">
-          <div className="landing-brand">
-            <img src="/mascot.png" alt="" className="landing-mascot" aria-hidden />
-            <h1 className="landing-logo">Skafold</h1>
-          </div>
+      <div className="landing-shell">
+        <header className="landing-header">
+          <img
+            src="/brand/skafold-logo.png"
+            alt="skafold"
+            className="landing-logo-full"
+            width={280}
+            height={80}
+          />
           <p className="landing-tagline">
-            From ideas to plans to focused action.
+            Ideas → plans → focus. Built for brains that bounce—clear steps, zero clutter.
           </p>
-          <button
-            type="button"
-            className="landing-get-started"
-            onClick={handleGetStarted}
-          >
-            Get Started
-          </button>
-        </div>
-      </section>
+        </header>
 
-      <section id="landing-signin" className="landing-signin">
-        <div className="onboarding-card">
-          <h2>Sign in to continue</h2>
-          <p>Create your account or sign in to get started.</p>
-          {isEntraEnabled && (
-            <>
-              <button
-                type="button"
-                className="landing-entra-btn"
-                onClick={() => loginWithEntra()}
+        <main className="landing-main">
+          <div className="landing-card">
+            <h1 className="landing-card-title">Start free with email</h1>
+            <p className="landing-card-lede">
+              No Microsoft account needed. We&apos;ll set you up in one step.
+            </p>
+
+            <form className="landing-form" onSubmit={handleSubmit} noValidate>
+              <label className="landing-label" htmlFor="landing-email">
+                Email
+              </label>
+              <input
+                id="landing-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                autoComplete="email"
                 disabled={loading}
-              >
-                Sign in with Microsoft
+                className="landing-input"
+              />
+
+              <label className="landing-label" htmlFor="landing-name">
+                What should we call you? <span className="landing-optional">(optional)</span>
+              </label>
+              <input
+                id="landing-name"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                autoComplete="name"
+                disabled={loading}
+                className="landing-input"
+              />
+
+              {error && (
+                <p className="landing-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <button type="submit" className="landing-btn-primary" disabled={loading}>
+                {loading ? 'Signing you in…' : 'Continue'}
               </button>
-              <p className="landing-divider">or</p>
-            </>
-          )}
-          <form onSubmit={handleSubmit}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your email"
-              autoComplete="email"
-              autoFocus={showSignIn && !isEntraEnabled}
-              disabled={loading}
-            />
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name (optional)"
-              autoComplete="name"
-              disabled={loading}
-            />
-            {error && <p className="landing-error" role="alert">{error}</p>}
-            <button type="submit" disabled={loading}>
-              {loading ? 'Signing in…' : isEntraEnabled ? 'Sign in with email' : 'Sign in'}
-            </button>
-          </form>
-        </div>
-      </section>
+            </form>
+
+            <div className="landing-oauth-soon" aria-label="More sign-in options coming soon">
+              <span className="landing-oauth-soon-label">More ways to sign in</span>
+              <div className="landing-oauth-row">
+                <button
+                  type="button"
+                  className="landing-btn-oauth landing-btn-oauth--disabled"
+                  disabled
+                  title="Google sign-in — coming soon"
+                >
+                  <span className="landing-oauth-icon" aria-hidden>
+                    G
+                  </span>
+                  Google
+                </button>
+                <button
+                  type="button"
+                  className="landing-btn-oauth landing-btn-oauth--disabled"
+                  disabled
+                  title="Apple sign-in — coming soon"
+                >
+                  Apple
+                </button>
+              </div>
+              <p className="landing-oauth-hint">
+                We&apos;re adding Google and Apple—hang tight.
+              </p>
+            </div>
+
+            {isEntraEnabled && (
+              <details className="landing-admin-auth">
+                <summary className="landing-admin-summary">
+                  Team / work sign-in (Microsoft)
+                </summary>
+                <p className="landing-admin-copy">
+                  For people helping run or maintain the app. Everyone else can use email above.
+                </p>
+                <button
+                  type="button"
+                  className="landing-btn-entra"
+                  onClick={() => loginWithEntra()}
+                  disabled={loading}
+                >
+                  Sign in with Microsoft
+                </button>
+              </details>
+            )}
+          </div>
+        </main>
+
+        <footer className="landing-footer">
+          <p>Simple actions. Calm visuals. You&apos;ve got this.</p>
+        </footer>
+      </div>
     </div>
   );
 }
