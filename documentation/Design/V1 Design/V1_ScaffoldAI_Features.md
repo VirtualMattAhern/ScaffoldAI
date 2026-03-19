@@ -1,6 +1,8 @@
 # SkafoldAI — V1 Feature Summary
 
-**Last updated:** 2026-03-18 UTC
+**Last updated:** 2026-03-20 UTC  
+
+**Master list:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) (completed + pending backlog, priorities, suggested order).
 
 This document tracks all V1 features: what has been delivered, what is still pending, and what was deferred to V2.
 
@@ -15,9 +17,9 @@ This document tracks all V1 features: what has been delivered, what is still pen
 | **AI features** | ✅ Complete | — |
 | **Infrastructure** | ✅ Complete | — |
 | **Neurodivergent design** | ✅ Complete | — |
-| **Deployment** | ⚠️ Deploy failing | AZURE_CREDENTIALS secret required for CI/CD |
+| **Deployment / CI/CD** | ✅ Complete | Ongoing ops (monitoring, DNS, secrets rotation) |
 
-**V1 is feature-complete.** All planned features are implemented. The Container Apps deploy workflow requires `AZURE_CREDENTIALS` (service principal JSON) in GitHub Secrets to succeed.
+**V1 is feature-complete** for original scope. Container Apps deploy via GitHub Actions is operational when `AZURE_CREDENTIALS` and Entra build secrets are configured.
 
 ---
 
@@ -33,7 +35,7 @@ SkafoldAI helps a business owner move from ideas to plans to focused action acro
 
 | Screen | Status | Notes |
 |--------|--------|-------|
-| Landing / Sign-in | ✅ Delivered | Email login + Microsoft Entra ID ("Sign in with Microsoft") |
+| Landing / Sign-in | ✅ Delivered | Email login; Entra for team/work (see [SIGN_IN_AND_BRANDING.md](../../SIGN_IN_AND_BRANDING.md)); landing branding + icon (see V2 / tracker X03–X04) |
 | Onboarding (5 steps) | ✅ Delivered | Welcome → business type → starter playbook → brain dump demo → completion |
 | Monthly — Playbooks | ✅ Delivered | List, Open/Close expand, inline Edit (title + steps), Create new playbook, AI badge |
 | Weekly — Planning | ✅ Delivered | Brain dump, AI Convert, task table with status badges + delete, quick-add, AI Suggest Top 3 |
@@ -129,8 +131,10 @@ SkafoldAI helps a business owner move from ideas to plans to focused action acro
 | **All core features** | ✅ Complete | Landing, onboarding, Monthly/Weekly/Daily, Guided Mode, Decision Helper, Settings |
 | **Infrastructure** | ✅ Complete | Container Apps, custom domains, certs, Entra API |
 | **last_used_at** | ✅ Complete | Implemented in V2 Phase 2A |
-| **CI/CD deploy** | ⚠️ Blocked | Add `AZURE_CREDENTIALS` secret (service principal JSON) for Azure login |
-| **Entra frontend** | ✅ Ready | `VITE_ENTRA_CLIENT_ID` and `VITE_ENTRA_TENANT_ID` added; will apply on next successful deploy |
+| **CI/CD deploy** | ✅ Complete | GitHub Actions + `AZURE_CREDENTIALS`; see [DEPLOYMENT_CHECKLIST.md](../../DEPLOYMENT_CHECKLIST.md) |
+| **Entra frontend** | ✅ Complete | `VITE_ENTRA_*` secrets; web build bakes in client/tenant |
+
+**Pre–public-user gaps** (not V1 scope but tracked globally): verified email / magic link, rate limits, full E2E — see [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) §2 (P-A*, P-G*).
 
 ---
 
@@ -241,24 +245,24 @@ SkafoldAI helps a business owner move from ideas to plans to focused action acro
 
 ---
 
-## Deferred to V2
+## Deferred to V2 (original list — status today)
 
-These were explicitly scoped out of V1 in the design review:
+Original V1 design review deferred these. **Several are now delivered** in V2 (tooltips, reduce motion, focus mode, bulk actions, PWA baseline). **Still open** items are tracked in [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) §2.
 
-| Feature | Reason |
-|---------|--------|
-| Keyboard shortcuts | Removed from roadmap — too complex for neurodivergent users (ADHD); adds cognitive load |
-| Tooltips on task metadata | Low-noise improvement; defer |
-| Reduce motion setting | WCAG AAA; defer to V2 |
-| Focus mode (hide header/helper) | Desirable but not V1 scope |
-| Drag-and-drop reordering | Interaction complexity |
-| Bulk actions (mark multiple Done) | Edge case |
-| Customizable views (Kanban, calendar) | Significant UI work |
-| Auditory cues / reminders | Needs careful design |
-| Custom color-coding per goal/task | Settings complexity |
-| Multi-tenancy / organizations | Post-V1 architecture |
-| Offline sync (PWA) | Post-V1 |
-| Advanced analytics / reporting | Post-V1 |
+| Feature | Original reason | Status (2026-03) |
+|---------|-----------------|-------------------|
+| Keyboard shortcuts | Removed from roadmap — cognitive load | Still out of scope |
+| Tooltips on task metadata | Low-noise improvement | ✅ V2 2A |
+| Reduce motion setting | WCAG AAA | ✅ V2 2A |
+| Focus mode (hide header/helper) | Not V1 scope | ✅ V2 2A |
+| Drag-and-drop reordering | Interaction complexity | ⏳ Pending (tracker P-C1) |
+| Bulk actions (mark multiple Done) | Edge case | ✅ V2 2C |
+| Customizable views (Kanban, calendar) | Significant UI work | ⏳ Pending |
+| Auditory cues / reminders | Needs careful design | ⏳ Pending |
+| Custom color-coding per goal/task | Settings complexity | ⏳ Pending (tracker P-C2) |
+| Multi-tenancy / organizations | Post-V1 | ⏳ V3 (tracker P-E3) |
+| Offline sync (PWA) | Post-V1 | ⏳ Partial PWA; full offline V3 |
+| Advanced analytics / reporting | Post-V1 | ⏳ Future |
 
 ---
 

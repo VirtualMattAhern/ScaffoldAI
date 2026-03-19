@@ -1,8 +1,10 @@
-# SkafoldAI — Future Feature Ideas & Classification
+# SkafoldAI — V3 & Future Feature Ideas
 
-**Last updated:** 2026-03-15 UTC
+**Last updated:** 2026-03-20 UTC  
 
-New feature ideas beyond V1 and V2 scope. Each item is classified as **Add to V1**, **Backlog to V2**, or **Future Release**, with rationale. Focus areas: neurodivergent appeal, marketing differentiation, and application hardening.
+**Master backlog:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) §2 — every pending item with **target release** (V2 / V2.1 / V3), **priority** (P0–P3), and **suggested order** for sprint grouping.
+
+Ideas beyond current V2 delivery. Classifications below are **conceptual**; execution order follows the tracker.
 
 ---
 
@@ -176,41 +178,61 @@ These features lean into SkafoldAI's unique positioning as a tool built *for* ne
 
 ---
 
-## Classification Summary
+## Classification Summary (updated vs tracker)
 
-### Add to V1 (before or alongside production launch)
+Many items originally tagged **Add to V1** are **already shipped** (e.g. transition prompts, Not Today, error boundaries). **Near-term gaps** (email verification, rate limits, CSP, full E2E) are **V2.1** in [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) (rows P-A*, P-G1).
 
-| # | Feature | Effort |
+### Shipped since this doc was first written (non-exhaustive)
+
+| # | Feature | Notes |
 |---|---------|--------|
-| 3 | Transition Prompts | Small |
-| 4 | "Not Today" Button | Small |
-| 12 | End-to-End Testing | Medium |
-| 13 | Error Boundaries & Graceful Degradation | Small |
-| 16 | Security Audit | Medium |
-| 17 | Observability & Alerting | Small |
-| 18 | Content Security Policy | Small |
+| 3 | Transition Prompts | ✅ V1 |
+| 4 | Not Today | ✅ V1 |
+| 13 | Error boundaries | ✅ V1 |
+| 11 | PWA baseline | ✅ V2 (vite-plugin-pwa); deep offline still V3 |
+| 2 | Energy / spoon-style input | Partially covered by **energy-aware AI** (V2); full tracker TBD |
 
-### Backlog to V2
+### Still aligned with V2 / V2.1 (see tracker §2)
 
-| # | Feature | Effort |
-|---|---------|--------|
-| 1 | Body Doubling Mode | Medium |
-| 2 | Energy / Spoon Tracker | Medium |
-| 5 | Sensory-Friendly Themes | Medium |
-| 6 | Celebration Moments | Small |
-| 7 | "What Did I Do?" Weekly Wins | Medium |
-| 10 | Onboarding for Specific Personas | Medium |
-| 11 | Mobile-First PWA | Large |
-| 14 | Rate Limiting & Abuse Prevention | Medium |
-| 15 | Data Backup & Recovery | Medium |
+| # | Feature | Effort | Tracker |
+|---|---------|--------|---------|
+| 12 | End-to-End Testing | Medium | P-G1 |
+| 14 | Rate Limiting & Abuse Prevention | Medium | P-A2 |
+| 16 | Security review / hardening | Medium | P-A3 + audits |
+| 17 | Observability & Alerting | Small | P-E7 / ops |
+| 18 | Content Security Policy | Small | P-A3 |
 
-### Future Release (V3+)
+### V3+ differentiation (future release)
 
-| # | Feature | Effort |
-|---|---------|--------|
-| 8 | Shareable Playbooks | Large |
-| 9 | Scaffolding Score | Large |
+| # | Feature | Effort | Tracker |
+|---|---------|--------|---------|
+| 1 | Body Doubling Mode | Medium | P-F1 |
+| 5 | Sensory-Friendly Themes | Medium | P-F2 |
+| 6 | Celebration Moments | Small | P-F3 |
+| 7 | "What Did I Do?" Weekly Wins | Medium | P-D1 (overlap V2) |
+| 10 | Onboarding for Specific Personas | Medium | P-F4 |
+| 15 | Data Backup & Recovery | Medium | P-E5 |
+| 8 | Shareable Playbooks | Large | P-F5 |
+| 9 | Scaffolding Score | Large | P-F6 |
+
+### Process (V3 / V4)
+
+| Item | Notes |
+|------|--------|
+| Dev vs prod environments | [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) P-G2 — all dev/test on staging before `main` |
 
 ---
 
-*Reference: [V1_ScaffoldAI_Features.md](Design/V1%20Design/V1_ScaffoldAI_Features.md), [V2_ScaffoldAI_Features.md](Design/V2%20Design/V2_ScaffoldAI_Features.md)*
+## V3 pending at a glance
+
+| Theme | Examples | Typical priority |
+|-------|----------|-------------------|
+| **Scale** | Multi-tenancy, offline sync, export, Redis | P2 |
+| **Differentiation** | Body doubling, sensory themes, personas, shareable playbooks | P2–P3 |
+| **Trust** | Backups, deeper security review | P2 |
+
+Full rows: **FEATURE_TRACKER.md §2** (columns: target release, value, P0–P3, suggested order).
+
+---
+
+*Reference: [V1_ScaffoldAI_Features.md](../V1%20Design/V1_ScaffoldAI_Features.md) · [V2_ScaffoldAI_Features.md](../V2%20Design/V2_ScaffoldAI_Features.md) · [FEATURE_TRACKER.md](../FEATURE_TRACKER.md)*

@@ -1,6 +1,8 @@
 # SkafoldAI — V2 Feature Roadmap
 
-**Last updated:** 2026-03-18 UTC
+**Last updated:** 2026-03-20 UTC  
+
+**Master list:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) — consolidated **completed** table, **pending** table (priority P0–P3, suggested order, target release).
 
 This document outlines the V2 feature roadmap. V2 builds on a stable V1 with deeper AI, richer interactions, and broader accessibility. Items are grouped by theme and prioritized.
 
@@ -14,8 +16,21 @@ This document outlines the V2 feature roadmap. V2 builds on a stable V1 with dee
 | **2B** | ✅ Complete | Task chat, editable sub-steps, energy-aware | Smart re-prioritization |
 | **2C** | ✅ Mostly complete | Dark mode, bulk actions, ARIA/screen reader | Drag-and-drop, color-coding |
 | **2D** | ⚠️ Partial | PWA, basic API test | Push notifications, full E2E |
+| **Release & UX (chat / post-roadmap)** | ✅ Delivered | Landing overhaul, brand logo + app icon, email-first + team Microsoft, CI/CD | Google/Apple OAuth (see tracker P-B2) |
 
-**V2 core features are implemented.** Remaining items are lower priority or require additional infrastructure.
+**V2 core themes are largely implemented.** Remaining V2-scope work, V2.1 hardening, and V3 items are in **FEATURE_TRACKER.md §2**.
+
+---
+
+## Delivered — product & branding (not in original theme tables)
+
+| Item | Description |
+|------|-------------|
+| **Landing redesign** | Single font (Plus Jakarta Sans), cohesive sky/blue palette, one-screen hero + sign-in, touch-friendly controls |
+| **Brand assets** | Full logo on landing only; octopus icon for favicon + `apple-touch-icon` + PWA manifest |
+| **Sign-in UX** | Email primary; Microsoft under “Team / work”; Google / Apple disabled placeholders (“coming soon”) |
+| **CI/CD** | GitHub Actions builds API + Web in ACR, deploys Container Apps (with secrets documented) |
+| **Docs** | [SIGN_IN_AND_BRANDING.md](../../SIGN_IN_AND_BRANDING.md) |
 
 ---
 
@@ -96,30 +111,16 @@ V2 transforms SkafoldAI from a productivity scaffold into an adaptive executive 
 
 ---
 
-## V2 Delivery Phases
+## V2 Delivery Phases (historical plan — actuals)
 
-### Phase 2A (Immediate — complete V1 gaps)
-- Guided Mode screen
-- Decision Helper screen
-- Wire quick-add on Weekly
-- Playbook Open/Edit handlers
-- Reduce motion setting
+Original phase intent vs **current state** (see § Summary above and [FEATURE_TRACKER.md](../FEATURE_TRACKER.md)):
 
-### Phase 2B (Short-term — deeper AI)
-- AI-suggested playbooks
-- Task-specific chat
-- AI task breakdown
-- Focus mode
-- Timebox timer
-- Automated testing
-
-### Phase 2C (Medium-term — scale + polish)
-- Weekly review AI
-- Recurring tasks
-- Dark mode
-- PWA / offline sync
-- Multi-tenancy
-- Push notifications
+| Phase | Planned focus | Actual |
+|-------|----------------|--------|
+| **2A** | V1 gaps + reduce motion | ✅ Guided/Decision shipped in V1; 2A added motion, tooltips, focus mode, `last_used_at` |
+| **2B** | Deeper AI + timer + tests | ✅ Task chat, editable steps, energy-aware; ⏳ smart re-prioritize, timebox polish, full E2E |
+| **2C** | Scale + dark + PWA | ✅ Dark mode, bulk, ARIA; ⏳ DnD, color-coding; PWA shell ✅, deep offline ⏳ V3 |
+| **2D** / ongoing | Notifications, polish | ⏳ Push; ✅ PWA manifest/icons; landing/branding/CI per tracker |
 
 ---
 
