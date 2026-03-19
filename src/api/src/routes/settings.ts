@@ -24,7 +24,7 @@ settingsRouter.patch('/', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const { highContrast, fontSizePercent, dyslexiaFont, reduceMotion, focusMode, darkMode } = req.body;
   const db = await getDb();
-  const existing = await db.get<{ high_contrast: number; font_size_percent: number; dyslexia_font: number; reduce_motion?: number; focus_mode?: number }>('SELECT * FROM user_settings WHERE user_id = ?', [userId]);
+  const existing = await db.get<{ high_contrast: number; font_size_percent: number; dyslexia_font: number; reduce_motion?: number; focus_mode?: number; dark_mode?: number }>('SELECT * FROM user_settings WHERE user_id = ?', [userId]);
   const hc = highContrast !== undefined ? (highContrast ? 1 : 0) : (existing?.high_contrast ?? 0);
   const fs = fontSizePercent ?? existing?.font_size_percent ?? 100;
   const df = dyslexiaFont !== undefined ? (dyslexiaFont ? 1 : 0) : (existing?.dyslexia_font ?? 0);
