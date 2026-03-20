@@ -11,7 +11,7 @@ export function Landing() {
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithEntra, isEntraEnabled } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,24 +38,19 @@ export function Landing() {
       <div className="landing-shell">
         <header className="landing-header">
           <img
-            src="/brand/skafold-logo.png"
+            src="/brand/logo_noback.png"
             alt="skafold"
             className="landing-logo-full"
-            width={280}
+            width={300}
             height={80}
           />
           <p className="landing-tagline">
-            Ideas → plans → focus. Built for brains that bounce—clear steps, zero clutter.
+            Complex ideas. Scaffold structure. Clear tasks.
           </p>
         </header>
 
         <main className="landing-main">
           <div className="landing-card">
-            <h1 className="landing-card-title">Start free with email</h1>
-            <p className="landing-card-lede">
-              No Microsoft account needed. We&apos;ll set you up in one step.
-            </p>
-
             <form className="landing-form" onSubmit={handleSubmit} noValidate>
               <label className="landing-label" htmlFor="landing-email">
                 Email
@@ -72,14 +67,14 @@ export function Landing() {
               />
 
               <label className="landing-label" htmlFor="landing-name">
-                What should we call you? <span className="landing-optional">(optional)</span>
+                First name
               </label>
               <input
                 id="landing-name"
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
+                placeholder="First name"
                 autoComplete="name"
                 disabled={loading}
                 className="landing-input"
@@ -123,31 +118,8 @@ export function Landing() {
                 We&apos;re adding Google and Apple—hang tight.
               </p>
             </div>
-
-            {isEntraEnabled && (
-              <details className="landing-admin-auth">
-                <summary className="landing-admin-summary">
-                  Team / work sign-in (Microsoft)
-                </summary>
-                <p className="landing-admin-copy">
-                  For people helping run or maintain the app. Everyone else can use email above.
-                </p>
-                <button
-                  type="button"
-                  className="landing-btn-entra"
-                  onClick={() => loginWithEntra()}
-                  disabled={loading}
-                >
-                  Sign in with Microsoft
-                </button>
-              </details>
-            )}
           </div>
         </main>
-
-        <footer className="landing-footer">
-          <p>Simple actions. Calm visuals. You&apos;ve got this.</p>
-        </footer>
       </div>
     </div>
   );
