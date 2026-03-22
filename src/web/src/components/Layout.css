@@ -121,3 +121,65 @@
   width: 100%;
   background: var(--bg);
 }
+
+.quick-add-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--skafold-blue-500), var(--skafold-blue-700));
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+  cursor: pointer;
+  z-index: 20;
+}
+
+.quick-add-popover {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 5.7rem;
+  width: min(340px, calc(100vw - 2rem));
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--skafold-white);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  z-index: 20;
+}
+
+.quick-add-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.quick-add-popover-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.quick-add-popover-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--skafold-white);
+  color: var(--text);
+}
+
+.quick-add-popover-row button {
+  padding: 0.7rem 0.9rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}

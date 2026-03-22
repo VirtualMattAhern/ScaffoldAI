@@ -30,6 +30,7 @@ async function initSqliteSchema() {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       title TEXT NOT NULL,
+      color_hex TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
@@ -55,6 +56,8 @@ async function initSqliteSchema() {
       timebox_minutes INTEGER,
       next_step TEXT,
       top3_candidate INTEGER DEFAULT 0,
+      top3_rank INTEGER,
+      color_hex TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       completed_at TEXT,
       paused_until TEXT,
@@ -113,6 +116,9 @@ async function initSqliteSchema() {
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN reduce_motion INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN focus_mode INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN dark_mode INTEGER DEFAULT 0').run(); } catch {}
+  try { db.prepare('ALTER TABLE goals ADD COLUMN color_hex TEXT').run(); } catch {}
+  try { db.prepare('ALTER TABLE tasks ADD COLUMN top3_rank INTEGER').run(); } catch {}
+  try { db.prepare('ALTER TABLE tasks ADD COLUMN color_hex TEXT').run(); } catch {}
   db.close();
 }
 

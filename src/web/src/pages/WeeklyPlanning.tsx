@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
 import './Screen.css';
 
@@ -9,7 +9,26 @@ type Task = {
   type: string;
   goalId?: string;
   top3Candidate: boolean;
+  top3Rank?: number | null;
+  colorHex?: string | null;
   createdAt: string;
+};
+
+type WeeklyReview = {
+  summary: string;
+  stats: { completed: number; started: number; paused: number; top3Count: number; playbooksUsed: number };
+};
+
+const TASK_COLORS = ['#0ea5e9', '#8b5cf6', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
+type SpeechRecognitionCtor = new () => {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
 };
 
 export function WeeklyPlanning() {
@@ -23,6 +42,13 @@ export function WeeklyPlanning() {
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskStatus, setEditTaskStatus] = useState('open');
+  const [review, setReview] = useState<WeeklyReview | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
 
   const loadTasks = () => {
     const params: { status?: string; type?: string } = {};
@@ -31,12 +57,29 @@ export function WeeklyPlanning() {
     return api.tasks.list(Object.keys(params).length ? params : undefined);
   };
 
+  const sortedTasks = useMemo(
+    () =>
+      [...tasks].sort((a, b) => {
+        if (a.top3Candidate !== b.top3Candidate) return Number(b.top3Candidate) - Number(a.top3Candidate);
+        return (a.top3Rank ?? 999999) - (b.top3Rank ?? 999999) || a.createdAt.localeCompare(b.createdAt);
+      }),
+    [tasks],
+  );
+
   useEffect(() => {
     setLoading(true);
     Promise.all([api.brainDump.get(), loadTasks()]).then(([dump, taskList]) => {
       setBrainDump(dump.rawText);
       setTasks(taskList);
     }).finally(() => setLoading(false));
+  }, [filterStatus, filterType]);
+
+  useEffect(() => {
+    const refresh = () => {
+      loadTasks().then(setTasks).catch(() => {});
+    };
+    window.addEventListener('skafold:task-created', refresh);
+    return () => window.removeEventListener('skafold:task-created', refresh);
   }, [filterStatus, filterType]);
 
   const handleSaveDump = () => {
@@ -86,6 +129,83 @@ export function WeeklyPlanning() {
     }
   };
 
+  const handleEditTask = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditTaskTitle(task.title);
+    setEditTaskStatus(task.status);
+  };
+
+  const handleSaveTaskEdit = async (taskId: string) => {
+    try {
+      await api.tasks.update(taskId, { title: editTaskTitle.trim(), status: editTaskStatus });
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id === taskId ? { ...task, title: editTaskTitle.trim(), status: editTaskStatus } : task,
+        ),
+      );
+      setEditingTaskId(null);
+    } catch (err) {
+      setHelperMessage(err instanceof Error ? err.message : 'Failed to update task');
+    }
+  };
+
+  const handleColorChange = async (taskId: string, colorHex: string | null) => {
+    try {
+      await api.tasks.update(taskId, { colorHex });
+      setTasks((prev) => prev.map((task) => (task.id === taskId ? { ...task, colorHex } : task)));
+    } catch (err) {
+      setHelperMessage(err instanceof Error ? err.message : 'Failed to save color');
+    }
+  };
+
+  const handleGenerateReview = async () => {
+    setReviewing(true);
+    try {
+      const result = await api.tasks.weeklyReview();
+      setReview(result);
+    } catch (err) {
+      setHelperMessage(err instanceof Error ? err.message : 'Weekly review failed');
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+  const handleVoiceInput = () => {
+    const SpeechRecognitionClass = (
+      window as Window & { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor }
+    ).SpeechRecognition || (window as Window & { webkitSpeechRecognition?: SpeechRecognitionCtor }).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      setHelperMessage('Voice input is not supported in this browser.');
+      return;
+    }
+
+    if (recording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? '')
+        .join(' ')
+        .trim();
+      setBrainDump(transcript);
+    };
+    recognition.onerror = () => {
+      setRecording(false);
+      setHelperMessage('Voice input ran into a problem. You can still type your brain dump.');
+    };
+    recognition.onend = () => setRecording(false);
+    recognitionRef.current = recognition;
+    setRecording(true);
+    recognition.start();
+  };
+
   const handleDeleteTask = async (id: string) => {
     try {
       await api.tasks.update(id, { status: 'done' });
@@ -132,6 +252,9 @@ export function WeeklyPlanning() {
         <div className="actions">
           <button onClick={handleConvert} disabled={converting}>
             {converting ? 'Organizing your ideas…' : 'AI Convert'}
+          </button>
+          <button type="button" onClick={handleVoiceInput} style={{ marginLeft: '0.5rem' }}>
+            {recording ? 'Stop voice input' : 'Voice input'}
           </button>
         </div>
       </section>
@@ -198,18 +321,69 @@ export function WeeklyPlanning() {
               </tr>
             </thead>
             <tbody>
-              {tasks.map((t) => (
+              {sortedTasks.map((t) => (
                 <tr key={t.id} className={`${t.status === 'done' ? 'task-done' : ''} ${selectedIds.has(t.id) ? 'selected' : ''}`}>
                   <td>
                     {t.status !== 'done' && (
                       <input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)} aria-label={`Select ${t.title}`} />
                     )}
                   </td>
-                  <td>{t.title}</td>
-                  <td><span className={`status-badge status-${t.status}`} title={`Status: ${t.status.replace('_', ' ')}`}>{t.status.replace('_', ' ')}</span></td>
+                  <td>
+                    <div className="task-row-main">
+                      <span className="task-color-dot" style={{ background: t.colorHex || 'transparent', borderColor: t.colorHex ? t.colorHex : 'var(--border)' }} />
+                      {editingTaskId === t.id ? (
+                        <input
+                          value={editTaskTitle}
+                          onChange={(e) => setEditTaskTitle(e.target.value)}
+                          className="inline-task-input"
+                        />
+                      ) : (
+                        <button type="button" className="inline-task-trigger" onClick={() => handleEditTask(t)}>
+                          {t.title}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    {editingTaskId === t.id ? (
+                      <select value={editTaskStatus} onChange={(e) => setEditTaskStatus(e.target.value)} className="inline-task-select">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="paused">Paused</option>
+                        <option value="done">Done</option>
+                      </select>
+                    ) : (
+                      <span className={`status-badge status-${t.status}`} title={`Status: ${t.status.replace('_', ' ')}`}>{t.status.replace('_', ' ')}</span>
+                    )}
+                  </td>
                   <td title={t.top3Candidate ? 'Marked as Top 3 for today' : 'Not in Top 3'}>{t.top3Candidate ? '★' : ''}</td>
                   <td title={`Task type: ${t.type.replace('_', ' ')}`}>{t.type.replace('_', ' ')}</td>
-                  <td><button className="delete-btn" onClick={() => handleDeleteTask(t.id)} title="Delete">×</button></td>
+                  <td>
+                    <div className="task-row-actions">
+                      <select
+                        aria-label={`Color for ${t.title}`}
+                        value={t.colorHex ?? ''}
+                        onChange={(e) => handleColorChange(t.id, e.target.value || null)}
+                        className="inline-task-select"
+                      >
+                        <option value="">No color</option>
+                        {TASK_COLORS.map((color) => (
+                          <option key={color} value={color}>
+                            {color}
+                          </option>
+                        ))}
+                      </select>
+                      {editingTaskId === t.id ? (
+                        <>
+                          <button type="button" onClick={() => handleSaveTaskEdit(t.id)}>Save</button>
+                          <button type="button" onClick={() => setEditingTaskId(null)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button type="button" onClick={() => handleEditTask(t)}>Edit</button>
+                      )}
+                      <button className="delete-btn" onClick={() => handleDeleteTask(t.id)} title="Delete">×</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -231,6 +405,27 @@ export function WeeklyPlanning() {
             {suggesting ? 'Suggesting…' : 'AI Suggest Top 3'}
           </button>
         </div>
+      </section>
+
+      <section className="helper">
+        <h3>This week’s wins</h3>
+        <div className="actions-row" style={{ marginTop: 0 }}>
+          <button type="button" onClick={handleGenerateReview} disabled={reviewing}>
+            {reviewing ? 'Reviewing…' : 'Generate weekly review'}
+          </button>
+        </div>
+        {review && (
+          <div className="weekly-review-card">
+            <p>{review.summary}</p>
+            <div className="weekly-review-stats">
+              <span>Completed: {review.stats.completed}</span>
+              <span>Started: {review.stats.started}</span>
+              <span>Paused: {review.stats.paused}</span>
+              <span>Top 3 picks: {review.stats.top3Count}</span>
+              <span>Playbooks used: {review.stats.playbooksUsed}</span>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="helper">

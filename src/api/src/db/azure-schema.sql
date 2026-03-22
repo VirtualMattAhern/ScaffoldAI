@@ -14,6 +14,7 @@ CREATE TABLE goals (
   id NVARCHAR(36) PRIMARY KEY,
   user_id NVARCHAR(36) NOT NULL,
   title NVARCHAR(500) NOT NULL,
+  color_hex NVARCHAR(20),
   created_at DATETIME2 DEFAULT GETUTCDATE(),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -43,6 +44,8 @@ CREATE TABLE tasks (
   timebox_minutes INT,
   next_step NVARCHAR(500),
   top3_candidate INT DEFAULT 0,
+  top3_rank INT,
+  color_hex NVARCHAR(20),
   created_at DATETIME2 DEFAULT GETUTCDATE(),
   completed_at DATETIME2,
   paused_until DATETIME2,
@@ -102,6 +105,9 @@ CREATE TABLE user_settings (
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'reduce_motion') ALTER TABLE user_settings ADD reduce_motion INT DEFAULT 0;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'focus_mode') ALTER TABLE user_settings ADD focus_mode INT DEFAULT 0;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'dark_mode') ALTER TABLE user_settings ADD dark_mode INT DEFAULT 0;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('goals') AND name = 'color_hex') ALTER TABLE goals ADD color_hex NVARCHAR(20);
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'top3_rank') ALTER TABLE tasks ADD top3_rank INT;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'color_hex') ALTER TABLE tasks ADD color_hex NVARCHAR(20);
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_goals_user') CREATE INDEX idx_goals_user ON goals(user_id);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_playbooks_user') CREATE INDEX idx_playbooks_user ON playbooks(user_id);

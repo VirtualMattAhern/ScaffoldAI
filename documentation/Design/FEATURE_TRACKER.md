@@ -42,6 +42,13 @@ _All items below are implemented in the product unless noted as “docs/ops only
 | C28 | ARIA / screen reader improvements | V2 2C |
 | C29 | PWA (vite-plugin-pwa, manifest, SW) | V2 2D |
 | C30 | Basic API health / test hook (as documented in V2) | V2 2D |
+| C31 | Smart re-prioritization after pause / Not today | V2 closeout |
+| C32 | Drag-and-drop / manual reorder for Daily Top 3 and playbook steps | V2 closeout |
+| C33 | Task color-coding + inline task editing | V2 closeout |
+| C34 | Quick-add everywhere (global FAB composer) | V2 closeout |
+| C35 | AI weekly review / wins summary | V2 closeout |
+| C36 | AI playbook refinement | V2 closeout |
+| C37 | Voice input for brain dump | V2 closeout |
 
 ### Ops, release & branding (added outside original MDs)
 
@@ -52,56 +59,74 @@ _All items below are implemented in the product unless noted as “docs/ops only
 | X03 | Landing UX overhaul | Plus Jakarta Sans; sky palette; logo **only** on landing; **icon** favicon + PWA |
 | X04 | Sign-in positioning | Email-first; Microsoft under **Team / work**; Google / Apple UI placeholders (“coming soon”) |
 | X05 | `documentation/SIGN_IN_AND_BRANDING.md` | Sign-in strategy + future OAuth notes |
+| X06 | Signed email session tokens + legacy-session migration | Removed normal API reliance on `X-User-Id`; existing local users can migrate cleanly |
+| X07 | API/global AI rate limiting + security headers + web CSP | V2 closeout hardening |
 
 ---
 
-## 2. Pending backlog
+## 2. Pre-Launch pending (PL)
 
-**Columns:** Target release (when we *intend* to align the item — still flexible), value, priority, **suggested order** (batch with nearby rows for planning).
+These are **not required to call V2 feature-complete**. They matter when you set a real launch date for outside users.
 
-| Suggested order | Target | Feature | Value | Priority |
-|-----------------|--------|---------|-------|----------|
-| P-A1 | **V2.1** | **Verify email / magic link (or OTP) for email sign-in** | Stops account impersonation before real users | **P0** |
-| P-A2 | **V2.1** | **API rate limiting + abuse caps on AI** | Cost control, fair use | **P0** |
-| P-A3 | **V2.1** | **CSP headers + security pass on API/web** | Hardening for public web | **P0** |
-| P-B1 | V2 | Smart re-prioritization (AI adjusts Top 3 on pause/skip + short “why”) | Less manual juggling; core ADHD value | P1 |
-| P-B2 | V2 | Google / Apple sign-in (B2C or auth provider) | Matches expectation for “regular people” | P1 |
-| P-B3 | V2 | Push notifications (timebox, daily nudge) — infra + permission UX | Re-engagement without opening app | P1 |
-| P-C1 | V2 | Drag-and-drop (Daily Top 3 + playbook steps) | Faster reordering | P2 |
-| P-C2 | V2 | Color-coding per goal/task (optional) | Visual grouping | P2 |
-| P-C3 | V2 | Inline task edit (title + status cycle) | Less friction than full forms | P2 |
-| P-C4 | V2 | Quick-add everywhere (FAB or shortcut) | Capture from any screen | P2 |
-| P-D1 | V2 | AI weekly review / wins summary | Closure + motivation | P2 |
-| P-D2 | V2 | Timebox / Pomodoro polish (if not fully meeting V2 spec) | Execution support | P2 |
-| P-D3 | V2 | Extended undo / history (beyond 5s toast) | Safety net for mistakes | P3 |
-| P-D4 | V2 | AI playbook refinement after use | Better templates over time | P3 |
-| P-D5 | V2 | Auditory cues (opt-in) | Accessibility + feedback | P3 |
-| P-D6 | V2 | Voice input for brain dump | Faster capture | P3 |
-| P-E1 | V2–V3 | Task dependencies + recurring tasks (playbook-driven) | Richer planning | P2 |
-| P-E2 | V2–V3 | Goal progress + weekly calendar view | Visibility | P3 |
-| P-E3 | V3 | Multi-tenancy / orgs | Teams | P2 |
-| P-E4 | V3 | Offline-first sync (beyond current PWA shell) | True offline | P2 |
-| P-E5 | V3 | Data export (CSV/PDF) + backup story | Trust + GDPR | P2 |
-| P-E6 | V3 | Redis / caching layer | Scale + latency | P3 |
-| P-E7 | V3 | Comprehensive structured logging / dashboards | Ops | P2 |
-| P-F1 | V3 | Body doubling mode | Differentiation, ADHD | P2 |
-| P-F2 | V3 | Sensory-friendly themes (“Calm”, “Focus”, “Warm”) | Sensory access | P2 |
-| P-F3 | V3 | Celebration moments (opt-in; respect reduce motion) | Dopamine-safe wins | P3 |
-| P-F4 | V3 | Persona-based onboarding | Conversion | P2 |
-| P-F5 | V3 | Shareable playbooks / templates | Viral loop | P3 |
-| P-F6 | V3 | “Scaffolding score” / gentle usage insights | Show value; not punitive | P3 |
-| P-G1 | V2–V3 | **Full E2E suite** (Playwright/Cypress in CI) | Catch regressions | **P1** |
-| P-G2 | V3 | Dev / staging environment (test before prod) | Process (per team plan ~V3/V4) | P2 |
+| ID | Feature | Why it is PL | What is still needed |
+|----|---------|--------------|----------------------|
+| **PL-A1** | Verify email / magic link (or OTP) for email sign-in | Important for public users, but not needed while you are the only user and launch timing is unknown | **Foundation shipped:** signed session tokens and legacy migration are live. Still needs actual email delivery provider, verification codes/links, resend/expiry UX, and rollout decision. |
+| **PL-B2** | Google / Apple sign-in (B2C or auth provider) | Useful for a public audience, but not worth provider/account cost before launch timing is real | UI placeholder exists only. Needs provider decision, provider setup, callback handling, and account-linking rules. |
 
-**Grouping for sprints**
+---
+
+## 3. Pending backlog (post-V2 / V3+)
+
+**Columns:** target release (current planning intent), value, priority, **suggested order** (batch nearby rows together), and **why it is still pending / what it needs next**.
+
+| Suggested order | Target | Feature | Value | Priority | Pending because / needs |
+|-----------------|--------|---------|-------|----------|-------------------------|
+| P-E1 | V2–V3 | Task dependencies + recurring tasks (playbook-driven) | Richer planning | P2 | Needs schema changes, scheduling rules, and UI to avoid complexity overload. |
+| P-E2 | V2–V3 | Goal progress + weekly calendar view | Visibility | P3 | Needs progress model, calendar UX, and clarity that it helps rather than overwhelms. |
+| P-E6 | V3 | Redis / caching layer | Scale + latency | P3 | Not needed at current scale. Add when usage/latency justifies infra complexity. |
+| P-E7 | V3 | Comprehensive structured logging / dashboards | Ops | P2 | Basic monitoring exists, but needs structured app logs, dashboards, alert thresholds, and traceability. |
+| P-F1 | V3 | Body doubling mode | Differentiation, ADHD | P2 | Needs product design for check-in cadence, persistent companion UI, and tone testing. |
+| P-F2 | V3 | Sensory-friendly themes (“Calm”, “Focus”, “Warm”) | Sensory access | P2 | Needs theme system expansion, design exploration, and accessibility verification across modes. |
+| P-F3 | V3 | Celebration moments (opt-in; respect reduce motion) | Dopamine-safe wins | P3 | Needs subtle reward patterns that feel supportive, not gamified or overstimulating. |
+| P-F4 | V3 | Persona-based onboarding | Conversion | P2 | Needs persona strategy, content variants, and measurement to prove onboarding lift. |
+| P-F5 | V3 | Shareable playbooks / templates | Viral loop | P3 | Needs import/export format, permissions/moderation rules, and template browsing UX. |
+| P-F6 | V3 | “Scaffolding score” / gentle usage insights | Show value; not punitive | P3 | Needs analytics model and careful framing so it motivates without judgment. |
+| P-G1 | V2–V3 | **Full E2E suite** (Playwright/Cypress in CI) | Catch regressions | **P1** | Basic build/test exists, but no full critical-path browser automation or stable CI environment for it yet. |
+| P-G2 | V3 | Dev / staging environment (test before prod) | Process (per team plan ~V3/V4) | P2 | Current workflow is prod-first. Needs separate infra, secrets, branch/release rules, and test data strategy. |
+
+## 3A. Recommended V3 next
+
+If V2 is considered closed, these are the strongest next candidates for V3 based on product value vs complexity:
+
+| Order | Feature | Why it is a strong next step |
+|-------|---------|------------------------------|
+| V3-1 | **P-E1** Task dependencies + recurring tasks | Highest planning-system value; deepens the core workflow rather than adding surface polish. |
+| V3-2 | **P-E7** Structured logging / dashboards | Improves operational confidence before more users and more complexity. |
+| V3-3 | **P-G2** Dev / staging environment | Matches your stated V4-ish process goal and reduces prod-first risk. |
+| V3-4 | **P-F1** Body doubling mode | Strong differentiation for ADHD users and a clear “Skafold-only” feature. |
+| V3-5 | **P-F2** Sensory-friendly themes | High brand/value alignment with the neurodivergent-first positioning. |
+| V3-6 | **P-F4** Persona-based onboarding | Good conversion/fit improvement once the core loop is stable. |
+
+## 3B. Very Low Priority / Reference only
+
+These are intentionally **out of the active build backlog for now**. Keep them for reference, but assume they are unlikely to ship unless priorities change later.
+
+| Suggested order | Original target | Feature | Why parked for now |
+|-----------------|-----------------|---------|--------------------|
+| P-B3 | V2 | Push notifications (timebox, daily nudge) — infra + permission UX | Higher UX/security/core-flow items matter more first; notifications add infra and interruption risk. |
+| P-D2 | V2 | Timebox / Pomodoro polish | Basic timer support already exists in Guided Mode; deeper Pomodoro work is not essential right now. |
+| P-D3 | V2 | Extended undo / history (beyond 5s toast) | Current undo covers the common case; broader history is extra complexity for low near-term value. |
+| P-D5 | V2 | Auditory cues (opt-in) | Easy to over-stimulate users and adds sound design/settings surface area. |
+| P-E3 | V3 | Multi-tenancy / orgs | Not needed while the product is single-user / early-stage. |
+| P-E4 | V3 | Offline-first sync (beyond current PWA shell) | Installable PWA is enough for now; full sync/conflict handling is large scope. |
+| P-E5 | V3 | Data export (CSV/PDF) + backup story | Useful later, but not core to validating current product-market fit. |
+
+**Grouping for active sprints**
 
 | Group | Orders | Theme |
 |-------|--------|--------|
-| **Trust & launch** | P-A1–P-A3 | Safe email auth, limits, CSP |
-| **Engagement** | P-B1–P-B3 | Smarter list, social login, notifications |
-| **Daily polish** | P-C1–P-C4 | Interaction quality on core screens |
-| **AI + depth** | P-D1–P-D4 | Reviews, timers, undo, playbooks |
-| **Scale & V3** | P-E*, P-F* | Orgs, offline, themes, market features |
+| **Pre-launch only** | PL-A1, PL-B2 | Public-user auth/provider setup |
+| **Scale & V3** | P-E1, P-E2, P-E6, P-E7, P-F* | Planning depth, ops, themes, market features |
 | **Quality bar** | P-G1–P-G2 | E2E + environments |
 
 ---
@@ -109,8 +134,8 @@ _All items below are implemented in the product unless noted as “docs/ops only
 ## 3. How to use this doc
 
 1. **Ship check:** Use §1 before a release demo.  
-2. **Planning:** Sort §2 by *Suggested order* within priority (P0 first).  
-3. **Detail:** When a row ships, update the relevant **V1 / V2 / V3** MD section and tick it here or remove from §2.
+2. **Planning:** Treat §2 as **launch-only**, §3 as the real post-V2 backlog, and start with §3A for likely V3 work.  
+3. **Detail:** When a row ships, update the relevant **V1 / V2 / V3** MD section and tick it here or remove from the appropriate section.
 
 ---
 

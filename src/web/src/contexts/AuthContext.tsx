@@ -2,9 +2,10 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { loginRequest, isEntraConfigured } from '../auth/msalConfig';
-import { setAuthTokenProvider } from '../api/client';
+import { api, setAuthTokenProvider } from '../api/client';
 
 const STORAGE_KEY = 'skafoldai_user';
+const SESSION_TOKEN_KEY = 'skafoldai_session_token';
 
 export type User = { id: string; email: string; displayName: string };
 
@@ -46,6 +47,11 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     setUserState(u);
   }, []);
 
+  const setSessionToken = useCallback((token: string | null) => {
+    if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
+    else localStorage.removeItem(SESSION_TOKEN_KEY);
+  }, []);
+
   const login = useCallback(async (email: string, displayName?: string): Promise<User> => {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
@@ -53,10 +59,11 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email.trim(), displayName: displayName?.trim() || undefined }),
     });
     if (!res.ok) throw new Error(await res.text().catch(() => 'Login failed'));
-    const u = (await res.json()) as User;
-    setUser(u);
-    return u;
-  }, [setUser]);
+    const data = (await res.json()) as { user: User; token: string };
+    setSessionToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, [setSessionToken, setUser]);
 
   const loginWithEntra = useCallback(async () => {
     if (!entraEnabled || !instance) return;
@@ -71,8 +78,9 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
     if (entraEnabled && instance) {
       instance.logoutRedirect().catch(() => setUser(null));
     }
+    setSessionToken(null);
     setUser(null);
-  }, [setUser, entraEnabled, instance]);
+  }, [setSessionToken, setUser, entraEnabled, instance]);
 
   // After Entra redirect: get token, call /api/auth/me with Bearer, sync user
   useEffect(() => {
@@ -164,10 +172,41 @@ function AuthProviderFallback({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setUserState(loadUser());
-    setLoading(false);
+  const setSessionToken = useCallback((token: string | null) => {
+    if (token) localStorage.setItem(SESSION_TOKEN_KEY, token);
+    else localStorage.removeItem(SESSION_TOKEN_KEY);
   }, []);
+
+  useEffect(() => {
+    const migrateLegacySession = async () => {
+      const currentUser = loadUser();
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      const existingToken = localStorage.getItem(SESSION_TOKEN_KEY);
+      if (existingToken) {
+        setUserState(currentUser);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const migrated = await api.auth.legacySession(currentUser.id);
+        setSessionToken(migrated.token);
+        setUserState(migrated.user);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+        setUserState(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    migrateLegacySession();
+  }, [setSessionToken]);
 
   const setUser = useCallback((u: User | null) => {
     if (u) localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
@@ -182,17 +221,21 @@ function AuthProviderFallback({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email.trim(), displayName: displayName?.trim() || undefined }),
     });
     if (!res.ok) throw new Error(await res.text().catch(() => 'Login failed'));
-    const u = (await res.json()) as User;
-    setUser(u);
-    return u;
-  }, [setUser]);
+    const data = (await res.json()) as { user: User; token: string };
+    setSessionToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, [setSessionToken, setUser]);
 
   const value: AuthContextValue = {
     user,
     loading,
     login,
     loginWithEntra: async () => {},
-    logout: () => setUser(null),
+    logout: () => {
+      setSessionToken(null);
+      setUser(null);
+    },
     setUser,
     isEntraEnabled: false,
   };

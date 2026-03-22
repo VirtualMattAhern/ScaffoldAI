@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-03-20 UTC  
 
-**Master list:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) — consolidated **completed** table, **pending** table (priority P0–P3, suggested order, target release).
+**Master list:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) — consolidated completed table, Pre-Launch pending items, and post-V2 / V3+ backlog.
 
 This document outlines the V2 feature roadmap. V2 builds on a stable V1 with deeper AI, richer interactions, and broader accessibility. Items are grouped by theme and prioritized.
 
@@ -13,12 +13,12 @@ This document outlines the V2 feature roadmap. V2 builds on a stable V1 with dee
 | Phase | Status | Delivered | Pending |
 |-------|--------|-----------|---------|
 | **2A** | ✅ Complete | Reduce motion, tooltips, focus mode, last_used_at | — |
-| **2B** | ✅ Complete | Task chat, editable sub-steps, energy-aware | Smart re-prioritization |
-| **2C** | ✅ Mostly complete | Dark mode, bulk actions, ARIA/screen reader | Drag-and-drop, color-coding |
-| **2D** | ⚠️ Partial | PWA, basic API test | Push notifications, full E2E |
-| **Release & UX (chat / post-roadmap)** | ✅ Delivered | Landing overhaul, brand logo + app icon, email-first + team Microsoft, CI/CD | Google/Apple OAuth (see tracker P-B2) |
+| **2B** | ✅ Complete | Task chat, editable sub-steps, energy-aware, smart re-prioritization | — |
+| **2C** | ✅ Complete | Dark mode, bulk actions, ARIA/screen reader, drag-and-drop, color-coding, inline task edit, quick-add everywhere | — |
+| **2D** | ✅ Complete | PWA, weekly review, playbook refinement, voice input, API hardening | — |
+| **Release & UX (chat / post-roadmap)** | ✅ Delivered | Landing overhaul, brand logo + app icon, email-first UX, CI/CD, session hardening | — |
 
-**V2 core themes are largely implemented.** Remaining V2-scope work, V2.1 hardening, and V3 items are in **FEATURE_TRACKER.md §2**.
+**V2 is complete for product development purposes.** Verified email delivery and Google/Apple sign-in are now tracked as **Pre-Launch (PL)** items rather than V2 blockers. Ongoing non-V2 work remains in `FEATURE_TRACKER.md` under post-V2 / V3+.
 
 ---
 
@@ -31,6 +31,9 @@ This document outlines the V2 feature roadmap. V2 builds on a stable V1 with dee
 | **Sign-in UX** | Email primary; Microsoft under “Team / work”; Google / Apple disabled placeholders (“coming soon”) |
 | **CI/CD** | GitHub Actions builds API + Web in ACR, deploys Container Apps (with secrets documented) |
 | **Docs** | [SIGN_IN_AND_BRANDING.md](../../SIGN_IN_AND_BRANDING.md) |
+| **Security/session hardening** | Signed email session tokens, legacy session migration path, API rate limiting, API security headers, frontend CSP via nginx |
+| **Workflow polish** | Daily smart reprioritization, drag-and-drop/manual reorder, inline task edit, color tags, global quick-add |
+| **Weekly/monthly depth** | AI weekly review, AI playbook refinement, voice input for brain dump |
 
 ---
 
@@ -118,9 +121,9 @@ Original phase intent vs **current state** (see § Summary above and [FEATURE_TR
 | Phase | Planned focus | Actual |
 |-------|----------------|--------|
 | **2A** | V1 gaps + reduce motion | ✅ Guided/Decision shipped in V1; 2A added motion, tooltips, focus mode, `last_used_at` |
-| **2B** | Deeper AI + timer + tests | ✅ Task chat, editable steps, energy-aware; ⏳ smart re-prioritize, timebox polish, full E2E |
-| **2C** | Scale + dark + PWA | ✅ Dark mode, bulk, ARIA; ⏳ DnD, color-coding; PWA shell ✅, deep offline ⏳ V3 |
-| **2D** / ongoing | Notifications, polish | ⏳ Push; ✅ PWA manifest/icons; landing/branding/CI per tracker |
+| **2B** | Deeper AI + timer + tests | ✅ Task chat, editable steps, energy-aware, smart reprioritize; launch-only auth provider work moved to PL |
+| **2C** | Scale + dark + PWA | ✅ Dark mode, bulk, ARIA, DnD, color-coding, inline edit, quick-add everywhere; PWA shell ✅ |
+| **2D** / ongoing | Notifications, polish | ✅ Weekly review, playbook refine, voice input, security/session hardening; verified email provider moved to PL |
 
 ---
 

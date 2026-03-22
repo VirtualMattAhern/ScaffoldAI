@@ -26,17 +26,7 @@ FROM nginx:alpine AS production
 
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# SPA fallback: serve index.html for all routes (API called directly by browser via VITE_API_URL)
-RUN rm -f /etc/nginx/conf.d/default.conf && \
-    echo 'server { \
-    listen 8080; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 8080
 

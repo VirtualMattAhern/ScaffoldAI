@@ -1,7 +1,7 @@
 import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
-import { suggestPlaybooksFromTasks } from '../services/ai.js';
+import { refinePlaybookWithAi, suggestPlaybooksFromTasks } from '../services/ai.js';
 
 export const playbooksRouter = Router();
 
@@ -50,6 +50,39 @@ playbooksRouter.post('/ai-suggest', async (req, res) => {
     console.error('AI suggest playbooks error:', err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI suggestion failed',
+    });
+  }
+});
+
+playbooksRouter.post('/:id/ai-refine', async (req, res) => {
+  const userId = getUserId(req as Request & { userId?: string });
+  const { id } = req.params;
+  const db = await getDb();
+
+  const playbook = await db.get<{ id: string; title: string; steps: string }>(
+    'SELECT id, title, steps FROM playbooks WHERE id = ? AND user_id = ?',
+    [id, userId],
+  );
+  if (!playbook) return res.status(404).json({ error: 'Playbook not found' });
+
+  const relatedTasks = await db.all<{ title: string }>(
+    `SELECT title FROM tasks
+     WHERE user_id = ? AND playbook_id = ? AND completed_at IS NOT NULL
+     ORDER BY completed_at DESC LIMIT 10`,
+    [userId, id],
+  );
+
+  try {
+    const result = await refinePlaybookWithAi({
+      title: playbook.title,
+      steps: JSON.parse(playbook.steps || '[]'),
+      relatedTasks: relatedTasks.map((task) => task.title),
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('AI refine playbook error:', err);
+    res.status(500).json({
+      error: err instanceof Error ? err.message : 'AI refinement failed',
     });
   }
 });

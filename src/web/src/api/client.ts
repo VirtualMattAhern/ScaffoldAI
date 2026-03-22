@@ -1,5 +1,6 @@
 // In dev, Vite proxies /api to the API. In production, use VITE_API_URL (e.g. https://api.skafoldai.com/api)
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+const SESSION_TOKEN_KEY = 'skafoldai_session_token';
 
 let authTokenProvider: (() => Promise<string | null>) | null = null;
 
@@ -11,10 +12,8 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   const token = await authTokenProvider?.();
   if (token) return { Authorization: `Bearer ${token}` };
   try {
-    const raw = localStorage.getItem('skafoldai_user');
-    if (!raw) return {};
-    const u = JSON.parse(raw) as { id?: string };
-    if (u?.id) return { 'X-User-Id': u.id };
+    const sessionToken = localStorage.getItem(SESSION_TOKEN_KEY);
+    if (sessionToken) return { Authorization: `Bearer ${sessionToken}` };
   } catch {}
   return {};
 }
@@ -31,6 +30,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   auth: {
     me: () => request<{ id: string; email: string; displayName: string }>('/auth/me'),
+    legacySession: (userId: string) =>
+      request<{ user: { id: string; email: string; displayName: string }; token: string; migratedFromLegacySession: boolean }>(
+        '/auth/legacy-session',
+        { method: 'POST', headers: { 'X-User-Id': userId } },
+      ),
   },
   goals: {
     list: () => request<{ id: string; title: string; createdAt: string }[]>('/goals'),
@@ -43,6 +47,7 @@ export const api = {
     create: (data: { title: string; type: string; steps?: string[]; suggestedByAi?: boolean }) => request('/playbooks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: { title?: string; type?: string; steps?: string[]; lastUsedAt?: string }) => request(`/playbooks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     aiSuggest: () => request<{ playbooks: { title: string; steps: string[] }[]; explanation: string }>('/playbooks/ai-suggest', { method: 'POST' }),
+    aiRefine: (id: string) => request<{ title: string; steps: string[]; explanation: string }>(`/playbooks/${id}/ai-refine`, { method: 'POST' }),
   },
   tasks: {
     list: (params?: { status?: string; type?: string }) => {
@@ -50,12 +55,14 @@ export const api = {
       if (params?.status) q.set('status', params.status);
       if (params?.type) q.set('type', params.type);
       const query = q.toString();
-      return request<{ id: string; title: string; status: string; type: string; goalId?: string; nextStep?: string; top3Candidate: boolean; createdAt: string }[]>(`/tasks${query ? `?${query}` : ''}`);
+      return request<{ id: string; title: string; status: string; type: string; goalId?: string; nextStep?: string; top3Candidate: boolean; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>(`/tasks${query ? `?${query}` : ''}`);
     },
-    top3: () => request<{ id: string; title: string; status: string; nextStep?: string; timeboxMinutes?: number; createdAt: string }[]>('/tasks/top3'),
+    top3: () => request<{ id: string; title: string; status: string; nextStep?: string; timeboxMinutes?: number; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>('/tasks/top3'),
     create: (data: { title: string; goalId?: string; type?: string; nextStep?: string }) => request('/tasks', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: { status?: string; nextStep?: string; top3Candidate?: boolean; pausedUntil?: string }) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    update: (id: string, data: { title?: string; status?: string; nextStep?: string; top3Candidate?: boolean; top3Rank?: number | null; colorHex?: string | null; pausedUntil?: string }) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     aiSuggestTop3: () => request<{ taskIds: string[]; explanation: string }>('/tasks/ai-suggest-top3', { method: 'POST' }),
+    reprioritizeTop3: (data: { trigger: 'paused' | 'not_today'; taskId: string; lowEnergy?: boolean }) => request<{ taskIds: string[]; explanation: string }>('/tasks/ai-reprioritize-top3', { method: 'POST', body: JSON.stringify(data) }),
+    weeklyReview: () => request<{ summary: string; stats: { completed: number; started: number; paused: number; top3Count: number; playbooksUsed: number } }>('/tasks/weekly-review', { method: 'POST' }),
   },
   brainDump: {
     get: () => request<{ rawText: string; convertedAt: string | null }>('/brain-dump'),

@@ -18,7 +18,7 @@ export function MonthlyPlaybooks() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editSteps, setEditSteps] = useState('');
+  const [editSteps, setEditSteps] = useState<string[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<'repeat' | 'playbook'>('repeat');
@@ -26,6 +26,9 @@ export function MonthlyPlaybooks() {
   const [suggesting, setSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<{ title: string; steps: string[] }[] | null>(null);
   const [suggestionExplanation, setSuggestionExplanation] = useState<string | null>(null);
+  const [refiningId, setRefiningId] = useState<string | null>(null);
+  const [refineExplanation, setRefineExplanation] = useState<string | null>(null);
+  const [draggedStepIndex, setDraggedStepIndex] = useState<number | null>(null);
 
   useEffect(() => {
     api.playbooks.list().then(setPlaybooks).finally(() => setLoading(false));
@@ -43,12 +46,12 @@ export function MonthlyPlaybooks() {
   const handleEdit = (pb: Playbook) => {
     setEditingId(pb.id);
     setEditTitle(pb.title);
-    setEditSteps(pb.steps.join('\n'));
+    setEditSteps(pb.steps);
     setExpandedId(pb.id);
   };
 
   const handleSaveEdit = async (id: string) => {
-    const steps = editSteps.split('\n').map(s => s.trim()).filter(Boolean);
+    const steps = editSteps.map((step) => step.trim()).filter(Boolean);
     await api.playbooks.update(id, { title: editTitle, steps });
     setPlaybooks((prev) => prev.map(pb => pb.id === id ? { ...pb, title: editTitle, steps } : pb));
     setEditingId(null);
@@ -83,6 +86,31 @@ export function MonthlyPlaybooks() {
     const pb = await api.playbooks.create({ title: s.title, type: 'playbook', steps: s.steps, suggestedByAi: true }) as { id: string; title: string; type: string; steps: string[]; createdAt?: string };
     setPlaybooks((prev) => [{ ...pb, steps: s.steps, lastUsedAt: null, suggestedByAi: true, createdAt: pb.createdAt ?? new Date().toISOString() } as Playbook, ...prev]);
     setSuggestions((prev) => prev?.filter((x) => x.title !== s.title) ?? null);
+  };
+
+  const handleRefine = async (pb: Playbook) => {
+    setRefiningId(pb.id);
+    setRefineExplanation(null);
+    try {
+      const result = await api.playbooks.aiRefine(pb.id);
+      setEditingId(pb.id);
+      setExpandedId(pb.id);
+      setEditTitle(result.title);
+      setEditSteps(result.steps);
+      setRefineExplanation(result.explanation);
+    } catch (err) {
+      setRefineExplanation(err instanceof Error ? err.message : 'Refinement failed');
+    } finally {
+      setRefiningId(null);
+    }
+  };
+
+  const moveEditStep = (from: number, to: number) => {
+    if (to < 0 || to >= editSteps.length) return;
+    const next = [...editSteps];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setEditSteps(next);
   };
 
   if (loading) return <div className="screen-loading">Loading playbooks…</div>;
@@ -125,6 +153,12 @@ export function MonthlyPlaybooks() {
         </div>
       )}
 
+      {refineExplanation && (
+        <div className="ai-suggestion" style={{ marginBottom: '1rem' }}>
+          <p>{refineExplanation}</p>
+        </div>
+      )}
+
       {showCreate && (
         <div className="playbook-card" style={{ marginTop: '1rem' }}>
           <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Playbook title" style={{ width: '100%', padding: '0.5rem', marginBottom: '0.5rem', border: '1px solid var(--skafold-slate-200)', borderRadius: 'var(--skafold-radius-sm)' }} />
@@ -159,7 +193,35 @@ export function MonthlyPlaybooks() {
               {expandedId === pb.id && (
                 <div className="playbook-detail">
                   {editingId === pb.id ? (
-                    <textarea value={editSteps} onChange={e => setEditSteps(e.target.value)} rows={4} style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--skafold-slate-200)', borderRadius: 'var(--skafold-radius-sm)', fontFamily: 'inherit', marginBottom: '0.5rem' }} />
+                    <div className="playbook-step-editor">
+                      {editSteps.map((step, i) => (
+                        <div
+                          key={`${pb.id}-${i}`}
+                          className="playbook-step-row"
+                          draggable
+                          onDragStart={() => setDraggedStepIndex(i)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (draggedStepIndex !== null) moveEditStep(draggedStepIndex, i);
+                            setDraggedStepIndex(null);
+                          }}
+                        >
+                          <span className="playbook-step-num">{i + 1}</span>
+                          <input
+                            type="text"
+                            value={step}
+                            onChange={(e) =>
+                              setEditSteps((prev) => prev.map((existing, index) => (index === i ? e.target.value : existing)))
+                            }
+                            className="playbook-step-input"
+                          />
+                          <button type="button" onClick={() => moveEditStep(i, i - 1)} disabled={i === 0}>↑</button>
+                          <button type="button" onClick={() => moveEditStep(i, i + 1)} disabled={i === editSteps.length - 1}>↓</button>
+                          <button type="button" onClick={() => setEditSteps((prev) => prev.filter((_, index) => index !== i))}>×</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => setEditSteps((prev) => [...prev, ''])}>+ Add step</button>
+                    </div>
                   ) : (
                     pb.steps.length > 0 && (
                       <ol style={{ margin: '0.5rem 0', paddingLeft: '1.25rem' }}>
@@ -177,6 +239,9 @@ export function MonthlyPlaybooks() {
                 ) : (
                   <button onClick={() => handleEdit(pb)}>Edit</button>
                 )}
+                <button onClick={() => handleRefine(pb)} disabled={refiningId === pb.id}>
+                  {refiningId === pb.id ? 'Refining…' : 'AI refine'}
+                </button>
               </div>
             </li>
           ))}

@@ -144,6 +144,7 @@
   padding: 0.5rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
 .task-table th {
@@ -170,6 +171,63 @@
   padding: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 4px;
+}
+
+.task-row-main,
+.task-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.task-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.inline-task-trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-task-input,
+.inline-task-select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  background: var(--skafold-white);
+  color: var(--text);
+}
+
+.weekly-review-card {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--skafold-radius);
+  background: var(--skafold-white);
+  box-shadow: var(--skafold-shadow);
+}
+
+.weekly-review-card p {
+  margin-top: 0;
+}
+
+.weekly-review-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 /* Daily */
@@ -258,6 +316,33 @@
   color: #fff;
   border-color: var(--skafold-blue-700);
   border-radius: var(--skafold-radius-sm);
+}
+
+.playbook-step-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.playbook-step-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.playbook-step-num {
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 1.25rem;
+}
+
+.playbook-step-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
 }
 
 .ai-suggestion {

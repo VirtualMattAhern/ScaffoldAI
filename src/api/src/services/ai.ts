@@ -196,6 +196,56 @@ Output ONLY valid JSON.`;
   }
 }
 
+export async function reprioritizeTop3(input: {
+  trigger: 'paused' | 'not_today';
+  taskId: string;
+  lowEnergy?: boolean;
+  currentTop3: { id: string; title: string; status: string; type: string; createdAt: string }[];
+  availableTasks: { id: string; title: string; status: string; type: string; createdAt: string }[];
+}): Promise<{ taskIds: string[]; explanation: string }> {
+  const remaining = input.availableTasks.filter((task) => task.id !== input.taskId && task.status === 'open');
+  if (!isConfigured()) {
+    const fallback = remaining.slice(0, 3);
+    return {
+      taskIds: fallback.map((task) => task.id),
+      explanation:
+        input.trigger === 'not_today'
+          ? 'I swapped in the next open tasks so your Top 3 stays realistic for today.'
+          : 'I rebalanced your Top 3 after that pause so you still have a clear next path.',
+    };
+  }
+
+  const energyHint = input.lowEnergy ? 'The user marked low energy today, so prefer lighter or clearer tasks first.' : '';
+  const systemPrompt = `You help rebalance today's Top 3 when someone pauses or skips a task.
+Given the current Top 3, the triggering event, and the remaining open tasks, return a JSON object with:
+- "taskIds": up to 3 task ids in the new recommended order
+- "explanation": 1-2 short sentences explaining the reshuffle in plain reassuring language
+
+Keep the list realistic, reduce overload, and keep momentum. ${energyHint}
+Output ONLY valid JSON.`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    {
+      role: 'user',
+      content: `Trigger: ${input.trigger}\nChanged task id: ${input.taskId}\nCurrent Top 3:\n${input.currentTop3.map((task) => `${task.id} | ${task.title} | ${task.status}`).join('\n')}\n\nAvailable open tasks:\n${remaining.map((task) => `${task.id} | ${task.title} | ${task.type} | ${task.createdAt}`).join('\n')}`,
+    },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { taskIds?: string[]; explanation?: string };
+    return {
+      taskIds: (parsed.taskIds ?? []).slice(0, 3),
+      explanation: parsed.explanation ?? 'I rebalanced the list to keep today realistic.',
+    };
+  } catch {
+    return {
+      taskIds: remaining.slice(0, 3).map((task) => task.id),
+      explanation: content || 'I rebalanced the list to keep today realistic.',
+    };
+  }
+}
+
 /**
  * Suggest contextual helper text for the Daily screen.
  * - No active task: which task to start first and why
@@ -257,6 +307,33 @@ Keep responses brief (2-4 sentences). Be concrete and actionable. No fluff.`;
   ];
 
   return chat(messages) || "I'm not sure how to help with that. Try breaking it into smaller steps.";
+}
+
+export async function suggestWeeklyReview(input: {
+  completedTasks: string[];
+  startedCount: number;
+  pausedCount: number;
+  top3Count: number;
+  playbooksUsed: number;
+}): Promise<string> {
+  if (!isConfigured()) {
+    if (input.completedTasks.length === 0) return 'No completed tasks yet this week. Keep going.';
+    return `This week you completed ${input.completedTasks.length} tasks. Wins included: ${input.completedTasks.slice(0, 3).join(', ')}.`;
+  }
+
+  const systemPrompt = `You write a short weekly wins summary for a neurodivergent-friendly productivity app.
+Keep it concrete, encouraging, and non-judgmental. Mention wins, patterns, and one gentle suggestion.
+Keep it to 3-4 sentences max.`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    {
+      role: 'user',
+      content: `Completed tasks: ${input.completedTasks.join(', ') || 'None'}\nStarted count: ${input.startedCount}\nPaused count: ${input.pausedCount}\nTop 3 count: ${input.top3Count}\nPlaybooks used: ${input.playbooksUsed}`,
+    },
+  ]);
+
+  return content || 'Your week is taking shape. Notice what helped, keep what worked, and simplify the next step.';
 }
 
 export async function generateSubSteps(taskTitle: string): Promise<string[]> {
@@ -339,6 +416,51 @@ Keep steps specific and actionable. Output ONLY valid JSON, no markdown.`;
     };
   } catch {
     return { playbooks: [], explanation: content || 'Could not parse suggestions.' };
+  }
+}
+
+export async function refinePlaybookWithAi(input: {
+  title: string;
+  steps: string[];
+  relatedTasks: string[];
+}): Promise<{ title: string; steps: string[]; explanation: string }> {
+  if (!isConfigured()) {
+    return {
+      title: input.title,
+      steps: input.steps,
+      explanation: 'AI is not configured, so I kept the current playbook as-is.',
+    };
+  }
+
+  const systemPrompt = `You improve an existing playbook based on how related tasks have been completed.
+Return a JSON object with:
+- "title": an improved concise title
+- "steps": array of 3-8 refined steps
+- "explanation": 1-2 sentences explaining what changed
+
+Keep the structure simple and actionable. Output ONLY valid JSON.`;
+
+  const content = await chat([
+    { role: 'system', content: systemPrompt },
+    {
+      role: 'user',
+      content: `Current playbook title: ${input.title}\nCurrent steps:\n${input.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n\nRecent related completed tasks:\n${input.relatedTasks.join('\n') || 'None'}`,
+    },
+  ]);
+
+  try {
+    const parsed = JSON.parse(content) as { title?: string; steps?: string[]; explanation?: string };
+    return {
+      title: parsed.title || input.title,
+      steps: Array.isArray(parsed.steps) && parsed.steps.length > 0 ? parsed.steps : input.steps,
+      explanation: parsed.explanation || 'I tightened the playbook based on how you seem to use it.',
+    };
+  } catch {
+    return {
+      title: input.title,
+      steps: input.steps,
+      explanation: content || 'I reviewed the playbook and kept it simple.',
+    };
   }
 }
 

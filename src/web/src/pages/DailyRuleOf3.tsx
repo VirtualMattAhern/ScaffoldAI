@@ -10,6 +10,8 @@ type Task = {
   status: string;
   nextStep?: string;
   timeboxMinutes?: number;
+  top3Rank?: number | null;
+  colorHex?: string | null;
   createdAt: string;
 };
 
@@ -22,17 +24,22 @@ export function DailyRuleOf3() {
   const [undoTask, setUndoTask] = useState<Task | null>(null);
   const [transition, setTransition] = useState(false);
   const [lowEnergy, setLowEnergy] = useState(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helperRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const { settings, updateSettings } = useSettings();
 
-  useEffect(() => {
-    Promise.all([api.focusSentence.get(), api.tasks.top3()]).then(([fs, taskList]) => {
+  const loadDaily = useCallback(() => {
+    return Promise.all([api.focusSentence.get(), api.tasks.top3()]).then(([fs, taskList]) => {
       setFocusSentence(fs.sentence);
       setTasks(taskList);
-    }).finally(() => setLoading(false));
+    });
   }, []);
+
+  useEffect(() => {
+    loadDaily().finally(() => setLoading(false));
+  }, [loadDaily]);
 
   useEffect(() => {
     api.daily.helper({ activeTaskId: activeTaskId ?? undefined, lowEnergy: !!lowEnergy }).then((r) => setHelperText(r.text)).catch(() => setHelperText(''));
@@ -75,15 +82,42 @@ export function DailyRuleOf3() {
   };
 
   const handlePause = (id: string) => {
-    api.tasks.update(id, { status: 'paused' });
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'paused' } : t)));
+    api.tasks.update(id, { status: 'paused' }).then(async () => {
+      const result = await api.tasks.reprioritizeTop3({ trigger: 'paused', taskId: id, lowEnergy });
+      setHelperText(result.explanation);
+      const top3 = await api.tasks.top3();
+      setTasks(top3);
+    }).catch(() => {
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'paused' } : t)));
+    });
     if (activeTaskId === id) setActiveTaskId(null);
   };
 
   const handleNotToday = async (id: string) => {
     await api.tasks.update(id, { top3Candidate: false });
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    try {
+      const result = await api.tasks.reprioritizeTop3({ trigger: 'not_today', taskId: id, lowEnergy });
+      setHelperText(result.explanation);
+      const top3 = await api.tasks.top3();
+      setTasks(top3);
+    } catch {
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    }
     if (activeTaskId === id) setActiveTaskId(null);
+  };
+
+  const handleReorder = async (taskId: string, targetIndex: number) => {
+    const currentIndex = tasks.findIndex((task) => task.id === taskId);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= tasks.length) return;
+    const next = [...tasks];
+    const [moved] = next.splice(currentIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setTasks(next);
+    await Promise.all(
+      next.map((task, index) =>
+        api.tasks.update(task.id, { top3Candidate: true, top3Rank: index + 1 }),
+      ),
+    );
   };
 
   if (loading) return <div className="screen-loading">Loading…</div>;
@@ -140,7 +174,18 @@ export function DailyRuleOf3() {
         ) : (
           <ul className="task-cards">
             {tasks.map((t, i) => (
-              <li key={t.id} className={`task-card ${t.status === 'in_progress' ? 'task-card-active' : ''}`}>
+              <li
+                key={t.id}
+                className={`task-card ${t.status === 'in_progress' ? 'task-card-active' : ''}`}
+                draggable
+                onDragStart={() => setDraggedTaskId(t.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (draggedTaskId) handleReorder(draggedTaskId, i);
+                  setDraggedTaskId(null);
+                }}
+                style={t.colorHex ? { borderLeft: `6px solid ${t.colorHex}` } : undefined}
+              >
                 <div className="task-card-header">
                   <span className="task-num" title="Top 3 position">{i + 1}.</span>
                   <span className="task-title">{t.title}</span>
@@ -153,6 +198,8 @@ export function DailyRuleOf3() {
                 </div>
                 <div className="task-actions">
                   <button onClick={() => handleStart(t.id)}>Start</button>
+                  <button type="button" onClick={() => handleReorder(t.id, Math.max(0, i - 1))} disabled={i === 0}>Up</button>
+                  <button type="button" onClick={() => handleReorder(t.id, Math.min(tasks.length - 1, i + 1))} disabled={i === tasks.length - 1}>Down</button>
                   <button onClick={() => handlePause(t.id)}>Pause</button>
                   <button onClick={() => handleDone(t.id)}>Done</button>
                   <button onClick={() => handleNotToday(t.id)} className="not-today-btn">Not today</button>
