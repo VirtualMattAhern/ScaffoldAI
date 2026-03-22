@@ -1,4 +1,5 @@
-import express, { Request } from 'express';
+import crypto from 'crypto';
+import express from 'express';
 import cors from 'cors';
 import { goalsRouter } from './routes/goals.js';
 import { playbooksRouter } from './routes/playbooks.js';
@@ -12,6 +13,7 @@ import { guidedRouter } from './routes/guided.js';
 import { decisionsRouter } from './routes/decisions.js';
 import { verifySessionToken } from './auth/session.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
+import { logError, logInfo, logWarn, requestLogContext } from './observability/logger.js';
 
 export function createApp() {
   const app = express();
@@ -19,6 +21,29 @@ export function createApp() {
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
     : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+  app.use((req, res, next) => {
+    const incomingRequestId = req.header('x-request-id');
+    req.requestId = incomingRequestId?.trim() || crypto.randomUUID();
+    res.setHeader('X-Request-Id', req.requestId);
+
+    const startedAt = process.hrtime.bigint();
+    logInfo('request.start', {
+      ...requestLogContext(req),
+      ip: req.ip,
+    });
+
+    res.on('finish', () => {
+      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+      logInfo('request.finish', {
+        ...requestLogContext(req),
+        statusCode: res.statusCode,
+        durationMs: Math.round(durationMs * 100) / 100,
+      });
+    });
+
+    next();
+  });
 
   app.use(cors({ origin: corsOrigins }));
   app.use(express.json());
@@ -86,18 +111,19 @@ export function createApp() {
       const { validateEntraToken } = await import('./auth/entra.js');
       const user = await validateEntraToken(bearerMatch[1]);
       if (user) {
-        (req as Request & { userId?: string }).userId = user.id;
+        req.userId = user.id;
         return next();
       }
 
       const session = verifySessionToken(bearerMatch[1]);
       if (session?.sub) {
-        (req as Request & { userId?: string }).userId = session.sub;
+        req.userId = session.sub;
         return next();
       }
     }
 
-    res.status(401).json({ error: 'Authentication required' });
+    logWarn('auth.unauthorized', requestLogContext(req));
+    res.status(401).json({ error: 'Authentication required', requestId: req.requestId });
   });
 
   app.use('/api/auth', authRouter);
@@ -121,6 +147,14 @@ export function createApp() {
       status: 'ok',
       version: '1.0.0',
       azureOpenAI: azureConfigured ? 'configured' : 'not configured',
+    });
+  });
+
+  app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    logError('request.unhandled_error', requestLogContext(req), err);
+    res.status(500).json({
+      error: 'Unexpected server error',
+      requestId: req.requestId,
     });
   });
 

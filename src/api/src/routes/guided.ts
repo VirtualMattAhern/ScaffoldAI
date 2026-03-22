@@ -1,6 +1,7 @@
 import { Router, Request } from 'express';
 import { getDb } from '../db/client.js';
 import { generateSubSteps, taskChat } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const guidedRouter = Router();
 
@@ -18,8 +19,11 @@ guidedRouter.post('/:taskId/chat', async (req, res) => {
     const reply = await taskChat(task.title, message.trim(), history ?? []);
     res.json({ reply });
   } catch (err) {
-    console.error('Task chat error:', err);
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Chat failed' });
+    logError('guided.task_chat_failed', {
+      ...requestLogContext(req),
+      taskId,
+    }, err);
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Chat failed', requestId: req.requestId });
   }
 });
 
@@ -34,7 +38,10 @@ guidedRouter.get('/:taskId/substeps', async (req, res) => {
     const steps = await generateSubSteps(task.title);
     res.json({ steps });
   } catch (err) {
-    console.error('Sub-steps generation error:', err);
+    logError('guided.substeps_failed', {
+      ...requestLogContext(req),
+      taskId,
+    }, err);
     res.json({ steps: ['Start working on this task', 'Focus on the most important part first', 'Wrap up and review'] });
   }
 });

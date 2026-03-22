@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
 import { convertBrainDump } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const brainDumpRouter = Router();
 
@@ -81,9 +82,10 @@ brainDumpRouter.post('/convert', async (req, res) => {
       explanation: result.explanation,
     });
   } catch (err) {
-    console.error('Brain dump convert error:', err);
+    logError('brain_dump.convert_failed', requestLogContext(req), err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI conversion failed',
+      requestId: req.requestId,
     });
   }
 });

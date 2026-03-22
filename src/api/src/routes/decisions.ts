@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
 import { generateDecisionOptions } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const decisionsRouter = Router();
 
@@ -43,7 +44,10 @@ decisionsRouter.post('/', async (req, res) => {
     );
     res.status(201).json({ id, question, options });
   } catch (err) {
-    console.error('Decision generation error:', err);
+    logError('decisions.generate_failed', {
+      ...requestLogContext(req),
+      taskId,
+    }, err);
     const fallbackOptions = [
       { label: 'Option A', description: 'Conservative approach — lower risk, steady progress' },
       { label: 'Option B', description: 'Balanced approach — moderate risk, good progress' },

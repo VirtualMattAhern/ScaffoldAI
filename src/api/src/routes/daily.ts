@@ -1,6 +1,7 @@
 import { Router, Request } from 'express';
 import { getDb } from '../db/client.js';
 import { suggestDailyHelper } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const dailyRouter = Router();
 
@@ -30,9 +31,14 @@ dailyRouter.get('/helper', async (req, res) => {
     const text = await suggestDailyHelper(taskTitles, activeTask?.title, lowEnergy);
     res.json({ text });
   } catch (err) {
-    console.error('Daily helper error:', err);
+    logError('daily.helper_failed', {
+      ...requestLogContext(req),
+      activeTaskId,
+      lowEnergy,
+    }, err);
     res.status(500).json({
       text: taskTitles.length > 0 ? 'Start with the first task.' : 'Add tasks in Weekly Planning.',
+      requestId: req.requestId,
     });
   }
 });

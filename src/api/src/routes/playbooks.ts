@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
 import { refinePlaybookWithAi, suggestPlaybooksFromTasks } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const playbooksRouter = Router();
 
@@ -47,9 +48,10 @@ playbooksRouter.post('/ai-suggest', async (req, res) => {
     const { playbooks, explanation } = await suggestPlaybooksFromTasks(rows.map((r) => ({ ...r, completedAt: r.completed_at })));
     res.json({ playbooks, explanation });
   } catch (err) {
-    console.error('AI suggest playbooks error:', err);
+    logError('playbooks.ai_suggest_failed', requestLogContext(req), err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI suggestion failed',
+      requestId: req.requestId,
     });
   }
 });
@@ -80,9 +82,13 @@ playbooksRouter.post('/:id/ai-refine', async (req, res) => {
     });
     res.json(result);
   } catch (err) {
-    console.error('AI refine playbook error:', err);
+    logError('playbooks.ai_refine_failed', {
+      ...requestLogContext(req),
+      playbookId: id,
+    }, err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI refinement failed',
+      requestId: req.requestId,
     });
   }
 });

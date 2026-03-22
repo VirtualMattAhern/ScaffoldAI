@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
 import { reprioritizeTop3, suggestTop3, suggestWeeklyReview } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const tasksRouter = Router();
 
@@ -111,9 +112,10 @@ tasksRouter.post('/ai-suggest-top3', async (req, res) => {
 
     res.json({ taskIds, explanation });
   } catch (err) {
-    console.error('AI suggest top3 error:', err);
+    logError('tasks.ai_suggest_top3_failed', requestLogContext(req), err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI suggestion failed',
+      requestId: req.requestId,
     });
   }
 });
@@ -155,9 +157,14 @@ tasksRouter.post('/ai-reprioritize-top3', async (req, res) => {
 
     res.json({ taskIds, explanation });
   } catch (err) {
-    console.error('AI reprioritize top3 error:', err);
+    logError('tasks.ai_reprioritize_top3_failed', {
+      ...requestLogContext(req),
+      trigger,
+      taskId,
+    }, err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI reprioritization failed',
+      requestId: req.requestId,
     });
   }
 });
@@ -204,9 +211,10 @@ tasksRouter.post('/weekly-review', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Weekly review error:', err);
+    logError('tasks.weekly_review_failed', requestLogContext(req), err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'Weekly review failed',
+      requestId: req.requestId,
     });
   }
 });

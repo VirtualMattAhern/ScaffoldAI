@@ -3,6 +3,8 @@
  * Falls back to placeholder responses when not configured.
  */
 
+import { logWarn } from '../observability/logger.js';
+
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 function isConfigured(): boolean {
@@ -71,7 +73,10 @@ async function chat(messages: ChatMessage[]): Promise<string> {
 
     lastErr = await res.text();
     if (res.status === 404) {
-      console.warn(`Azure 404 at ${url.slice(0, 80)}..., trying next endpoint...`);
+      logWarn('ai.request_retry_404', {
+        statusCode: res.status,
+        urlPreview: url.slice(0, 120),
+      });
     } else {
       break;
     }

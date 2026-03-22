@@ -15,7 +15,7 @@ This document tracks deployment progress and open steps. Use it as a reference f
 | **Web** | ✅ Container App | skafoldai-web in skafoldai-env |
 | **Legacy** | ✅ Decommissioned | App Service + Static Web App removed |
 | **CI/CD** | ✅ GitHub Actions | `.github/workflows/azure-container-apps-deploy.yml` |
-| **Monitoring** | ✅ Script ready | Run `.\scripts\azure-monitoring-setup.ps1` |
+| **Monitoring** | ✅ Foundations in place | Script ready, structured API logs + request IDs shipped, see `OBSERVABILITY_GUIDE.md` |
 | **Managed Identity** | ✅ Script ready | Run `.\scripts\azure-managed-identity-acr.ps1` |
 | **Entra ID** | ✅ Script ready | Run `.\scripts\azure-entra-config.ps1` with your IDs |
 | **DNS** | ⚠️ Update needed | Point api/www to Container App FQDNs (see below) |
@@ -94,6 +94,12 @@ Run once to create Log Analytics + App Insights and link to Container Apps:
 ```powershell
 .\scripts\azure-monitoring-setup.ps1
 ```
+
+Operational guide for the V3 logging slice:
+
+- `documentation/OBSERVABILITY_GUIDE.md`
+- API now emits structured JSON logs with request IDs via stdout/stderr
+- Clients can correlate support issues using the `X-Request-Id` response header
 
 ---
 

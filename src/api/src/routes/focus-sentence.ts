@@ -2,6 +2,7 @@ import { Router, Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/client.js';
 import { suggestFocusSentence } from '../services/ai.js';
+import { logError, requestLogContext } from '../observability/logger.js';
 
 export const focusSentenceRouter = Router();
 
@@ -62,10 +63,11 @@ focusSentenceRouter.post('/suggest', async (req, res) => {
 
     res.json({ sentence });
   } catch (err) {
-    console.error('Focus sentence suggest error:', err);
+    logError('focus_sentence.suggest_failed', requestLogContext(req), err);
     res.status(500).json({
       error: err instanceof Error ? err.message : 'AI suggestion failed',
       sentence: "Today is for: moving the business forward without overload",
+      requestId: req.requestId,
     });
   }
 });
