@@ -43,6 +43,7 @@ CREATE TABLE tasks (
   type NVARCHAR(50) NOT NULL CHECK (type IN ('one_off', 'repeat', 'playbook')),
   dependency_task_id NVARCHAR(36),
   recurrence_rule NVARCHAR(20) CHECK (recurrence_rule IN ('daily', 'weekly', 'monthly')),
+  planned_for DATE,
   timebox_minutes INT,
   next_step NVARCHAR(500),
   top3_candidate INT DEFAULT 0,
@@ -111,6 +112,7 @@ IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_setti
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('goals') AND name = 'color_hex') ALTER TABLE goals ADD color_hex NVARCHAR(20);
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'dependency_task_id') ALTER TABLE tasks ADD dependency_task_id NVARCHAR(36);
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'recurrence_rule') ALTER TABLE tasks ADD recurrence_rule NVARCHAR(20);
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'planned_for') ALTER TABLE tasks ADD planned_for DATE;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'top3_rank') ALTER TABLE tasks ADD top3_rank INT;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'color_hex') ALTER TABLE tasks ADD color_hex NVARCHAR(20);
 

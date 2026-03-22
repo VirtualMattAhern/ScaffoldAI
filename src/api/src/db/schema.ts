@@ -55,6 +55,7 @@ async function initSqliteSchema() {
       type TEXT NOT NULL CHECK (type IN ('one_off', 'repeat', 'playbook')),
       dependency_task_id TEXT,
       recurrence_rule TEXT CHECK (recurrence_rule IN ('daily', 'weekly', 'monthly')),
+      planned_for TEXT,
       timebox_minutes INTEGER,
       next_step TEXT,
       top3_candidate INTEGER DEFAULT 0,
@@ -122,6 +123,7 @@ async function initSqliteSchema() {
   try { db.prepare('ALTER TABLE goals ADD COLUMN color_hex TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN dependency_task_id TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT').run(); } catch {}
+  try { db.prepare('ALTER TABLE tasks ADD COLUMN planned_for TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN top3_rank INTEGER').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN color_hex TEXT').run(); } catch {}
   db.close();

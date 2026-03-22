@@ -82,7 +82,7 @@ These are **not required to call V2 feature-complete**. They matter when you set
 | Suggested order | Target | Feature | Value | Priority | Pending because / needs |
 |-----------------|--------|---------|-------|----------|-------------------------|
 | P-E1 | V2–V3 | Task dependencies + recurring tasks (playbook-driven) | Richer planning | P2 | **In progress:** dependency fields, recurrence metadata, blocked-task filtering, recurrence rollover, and Weekly UI controls are built. Still needs deeper scheduling rules, playbook-driven recurrence UX, and broader polish. |
-| P-E2 | V2–V3 | Goal progress + weekly calendar view | Visibility | P3 | Needs progress model, calendar UX, and clarity that it helps rather than overwhelms. |
+| P-E2 | V2–V3 | Goal progress + weekly calendar view | Visibility | P3 | **In progress:** goal progress cards, goal-linked task planning, optional planned dates, and a Weekly calendar view are built. Still needs refinement around overload prevention, richer scheduling controls, and cross-screen polish. |
 | P-E6 | V3 | Redis / caching layer | Scale + latency | P3 | Not needed at current scale. Add when usage/latency justifies infra complexity. |
 | P-E7 | V3 | Comprehensive structured logging / dashboards | Ops | P2 | Basic monitoring exists, but needs structured app logs, dashboards, alert thresholds, and traceability. |
 | P-F1 | V3 | Body doubling mode | Differentiation, ADHD | P2 | Needs product design for check-in cadence, persistent companion UI, and tone testing. |

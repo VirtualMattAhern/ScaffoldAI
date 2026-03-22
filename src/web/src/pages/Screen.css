@@ -133,6 +133,77 @@
   margin: 1rem 0;
 }
 
+.goal-progress-grid,
+.weekly-calendar-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.goal-progress-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.goal-progress-card,
+.weekly-day-card {
+  border: 1px solid var(--border);
+  border-radius: var(--skafold-radius);
+  background: var(--skafold-white);
+  box-shadow: var(--skafold-shadow);
+  padding: 0.9rem;
+}
+
+.goal-progress-head,
+.weekly-day-head,
+.weekly-day-task {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.goal-progress-head,
+.weekly-day-head {
+  justify-content: space-between;
+}
+
+.goal-progress-track {
+  margin-top: 0.75rem;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--skafold-slate-100);
+  overflow: hidden;
+}
+
+.goal-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.weekly-calendar-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.weekly-day-card.is-today {
+  border-color: var(--skafold-blue-500);
+}
+
+.weekly-day-list {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.weekly-day-task {
+  align-items: flex-start;
+  font-size: 0.92rem;
+}
+
+.weekly-day-empty {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 /* Task list */
 .task-table {
   width: 100%;

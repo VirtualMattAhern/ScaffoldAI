@@ -238,6 +238,7 @@ Full rows: **FEATURE_TRACKER.md §2** (columns: target release, value, P0–P3, 
 | Item | Status | Notes |
 |------|--------|-------|
 | **P-E1** Task dependencies + recurring tasks | 🚧 In progress | First slice is built: dependency fields, recurrence metadata, blocked-task filtering for Top 3, recurring rollover on completion, and Weekly UI controls. Still needs deeper scheduling rules and broader UX polish. |
+| **P-E2** Goal progress + weekly calendar view | 🚧 In progress | First slice is built: goal progress cards, goal-linked quick-add/edit controls, planned-day metadata, and a Weekly calendar view. Still needs richer scheduling rules and calmer UX tuning. |
 
 ---
 

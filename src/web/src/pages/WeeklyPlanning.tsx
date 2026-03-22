@@ -7,12 +7,20 @@ type Task = {
   title: string;
   status: string;
   type: string;
-  goalId?: string;
+  goalId?: string | null;
   dependencyTaskId?: string | null;
   dependencyStatus?: string | null;
   recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null;
+  plannedFor?: string | null;
   top3Candidate: boolean;
   top3Rank?: number | null;
+  colorHex?: string | null;
+  createdAt: string;
+};
+
+type Goal = {
+  id: string;
+  title: string;
   colorHex?: string | null;
   createdAt: string;
 };
@@ -34,9 +42,26 @@ type SpeechRecognitionCtor = new () => {
   onend: (() => void) | null;
 };
 
+const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function getWeekStart() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const start = new Date(now);
+  start.setDate(diff);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
 export function WeeklyPlanning() {
   const [brainDump, setBrainDump] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
@@ -48,14 +73,18 @@ export function WeeklyPlanning() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskStatus, setEditTaskStatus] = useState('open');
+  const [editGoalId, setEditGoalId] = useState<string>('');
   const [editDependencyTaskId, setEditDependencyTaskId] = useState<string>('');
   const [editRecurrenceRule, setEditRecurrenceRule] = useState<string>('');
+  const [editPlannedFor, setEditPlannedFor] = useState('');
   const [review, setReview] = useState<WeeklyReview | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
+  const [quickAddGoalId, setQuickAddGoalId] = useState('');
   const [quickAddDependencyTaskId, setQuickAddDependencyTaskId] = useState('');
   const [quickAddRecurrenceRule, setQuickAddRecurrenceRule] = useState('');
+  const [quickAddPlannedFor, setQuickAddPlannedFor] = useState('');
 
   const loadTasks = () => {
     const params: { status?: string; type?: string } = {};
@@ -73,11 +102,49 @@ export function WeeklyPlanning() {
     [tasks],
   );
 
+  const goalProgress = useMemo(() => {
+    return goals.map((goal) => {
+      const goalTasks = tasks.filter((task) => task.goalId === goal.id);
+      const completed = goalTasks.filter((task) => task.status === 'done').length;
+      const total = goalTasks.length;
+      return {
+        ...goal,
+        total,
+        completed,
+        percent: total ? Math.round((completed / total) * 100) : 0,
+      };
+    }).filter((goal) => goal.total > 0);
+  }, [goals, tasks]);
+
+  const weekDays = useMemo(() => {
+    const start = getWeekStart();
+    return WEEKDAY_LABELS.map((label, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return {
+        label,
+        key: formatDateInput(date),
+        dayNumber: date.getDate(),
+        isToday: formatDateInput(date) === formatDateInput(new Date()),
+      };
+    });
+  }, []);
+
+  const weeklyCalendar = useMemo(
+    () =>
+      weekDays.map((day) => ({
+        ...day,
+        tasks: sortedTasks.filter((task) => task.plannedFor === day.key && task.status !== 'done'),
+      })),
+    [sortedTasks, weekDays],
+  );
+
   useEffect(() => {
     setLoading(true);
-    Promise.all([api.brainDump.get(), loadTasks()]).then(([dump, taskList]) => {
+    Promise.all([api.brainDump.get(), loadTasks(), api.goals.list()]).then(([dump, taskList, goalList]) => {
       setBrainDump(dump.rawText);
       setTasks(taskList);
+      setGoals(goalList);
     }).finally(() => setLoading(false));
   }, [filterStatus, filterType]);
 
@@ -131,13 +198,17 @@ export function WeeklyPlanning() {
     try {
       const task = await api.tasks.create({
         title,
+        goalId: quickAddGoalId || undefined,
         type: quickAddRecurrenceRule ? 'repeat' : 'one_off',
         dependencyTaskId: quickAddDependencyTaskId || undefined,
         recurrenceRule: (quickAddRecurrenceRule || undefined) as 'daily' | 'weekly' | 'monthly' | undefined,
+        plannedFor: quickAddPlannedFor || undefined,
       }) as Task;
       setTasks((prev) => [...prev, task]);
+      setQuickAddGoalId('');
       setQuickAddDependencyTaskId('');
       setQuickAddRecurrenceRule('');
+      setQuickAddPlannedFor('');
     } catch (err) {
       setHelperMessage(err instanceof Error ? err.message : 'Failed to add task');
     }
@@ -147,8 +218,10 @@ export function WeeklyPlanning() {
     setEditingTaskId(task.id);
     setEditTaskTitle(task.title);
     setEditTaskStatus(task.status);
+    setEditGoalId(task.goalId ?? '');
     setEditDependencyTaskId(task.dependencyTaskId ?? '');
     setEditRecurrenceRule(task.recurrenceRule ?? '');
+    setEditPlannedFor(task.plannedFor ?? '');
   };
 
   const handleSaveTaskEdit = async (taskId: string) => {
@@ -156,8 +229,10 @@ export function WeeklyPlanning() {
       await api.tasks.update(taskId, {
         title: editTaskTitle.trim(),
         status: editTaskStatus,
+        goalId: editGoalId || null,
         dependencyTaskId: editDependencyTaskId || null,
         recurrenceRule: (editRecurrenceRule || null) as 'daily' | 'weekly' | 'monthly' | null,
+        plannedFor: editPlannedFor || null,
       });
       setTasks((prev) =>
         prev.map((task) =>
@@ -166,8 +241,10 @@ export function WeeklyPlanning() {
                 ...task,
                 title: editTaskTitle.trim(),
                 status: editTaskStatus,
+                goalId: editGoalId || null,
                 dependencyTaskId: editDependencyTaskId || null,
                 recurrenceRule: (editRecurrenceRule || null) as 'daily' | 'weekly' | 'monthly' | null,
+                plannedFor: editPlannedFor || null,
               }
             : task,
         ),
@@ -290,6 +367,54 @@ export function WeeklyPlanning() {
 
       <p className="flow-hint">AI organizes goals + tasks for the week ↓</p>
 
+      {goalProgress.length > 0 && (
+        <section className="helper">
+          <h2>Goal progress</h2>
+          <p className="subtitle">A quick view of which weekly goals are moving and which still need attention.</p>
+          <div className="goal-progress-grid">
+            {goalProgress.map((goal) => (
+              <div key={goal.id} className="goal-progress-card">
+                <div className="goal-progress-head">
+                  <span className="task-color-dot" style={{ background: goal.colorHex || 'var(--skafold-blue-500)', borderColor: goal.colorHex || 'var(--skafold-blue-500)' }} />
+                  <strong>{goal.title}</strong>
+                  <span>{goal.completed}/{goal.total}</span>
+                </div>
+                <div className="goal-progress-track" aria-hidden="true">
+                  <div className="goal-progress-fill" style={{ width: `${goal.percent}%`, background: goal.colorHex || 'var(--skafold-blue-500)' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="helper">
+        <h2>Weekly calendar</h2>
+        <p className="subtitle">Give tasks a planned day to turn the week into a calmer visual schedule.</p>
+        <div className="weekly-calendar-grid">
+          {weeklyCalendar.map((day) => (
+            <div key={day.key} className={`weekly-day-card ${day.isToday ? 'is-today' : ''}`}>
+              <div className="weekly-day-head">
+                <strong>{day.label}</strong>
+                <span>{day.dayNumber}</span>
+              </div>
+              {day.tasks.length === 0 ? (
+                <p className="weekly-day-empty">No planned tasks</p>
+              ) : (
+                <div className="weekly-day-list">
+                  {day.tasks.map((task) => (
+                    <div key={task.id} className="weekly-day-task">
+                      <span className="task-color-dot" style={{ background: task.colorHex || 'transparent', borderColor: task.colorHex || 'var(--border)' }} />
+                      <span>{task.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="task-list">
         <h2>Weekly Task List</h2>
         <p className="subtitle">Filter by status or type — open items sorted to top</p>
@@ -368,6 +493,12 @@ export function WeeklyPlanning() {
                             className="inline-task-input"
                           />
                           <div className="inline-task-meta-row">
+                            <select value={editGoalId} onChange={(e) => setEditGoalId(e.target.value)} className="inline-task-select">
+                              <option value="">No goal</option>
+                              {goals.map((goal) => (
+                                <option key={goal.id} value={goal.id}>{goal.title}</option>
+                              ))}
+                            </select>
                             <select value={editDependencyTaskId} onChange={(e) => setEditDependencyTaskId(e.target.value)} className="inline-task-select">
                               <option value="">No dependency</option>
                               {sortedTasks.filter((task) => task.id !== t.id).map((task) => (
@@ -380,6 +511,7 @@ export function WeeklyPlanning() {
                               <option value="weekly">Weekly</option>
                               <option value="monthly">Monthly</option>
                             </select>
+                            <input type="date" value={editPlannedFor} onChange={(e) => setEditPlannedFor(e.target.value)} className="inline-task-input" />
                           </div>
                         </div>
                       ) : (
@@ -405,6 +537,11 @@ export function WeeklyPlanning() {
                   <td title={`Task type: ${t.type.replace('_', ' ')}`}>{t.type.replace('_', ' ')}</td>
                   <td>
                     <div className="task-row-actions">
+                      {t.goalId && (
+                        <span className="task-inline-pill" title="Linked to a goal">
+                          {goals.find((goal) => goal.id === t.goalId)?.title ?? 'Goal linked'}
+                        </span>
+                      )}
                       {t.dependencyTaskId && (
                         <span className="task-inline-pill" title={`Blocked until dependency is done${t.dependencyStatus ? ` (${t.dependencyStatus})` : ''}`}>
                           Depends on task
@@ -413,6 +550,11 @@ export function WeeklyPlanning() {
                       {t.recurrenceRule && (
                         <span className="task-inline-pill" title="Recurring task">
                           Repeats {t.recurrenceRule}
+                        </span>
+                      )}
+                      {t.plannedFor && (
+                        <span className="task-inline-pill" title="Planned day">
+                          Planned {t.plannedFor}
                         </span>
                       )}
                       <select
@@ -454,6 +596,12 @@ export function WeeklyPlanning() {
               onChange={(e) => setQuickAdd(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && quickAdd.trim()) handleQuickAdd(); }}
             />
+            <select value={quickAddGoalId} onChange={(e) => setQuickAddGoalId(e.target.value)} className="inline-task-select">
+              <option value="">No goal</option>
+              {goals.map((goal) => (
+                <option key={goal.id} value={goal.id}>{goal.title}</option>
+              ))}
+            </select>
             <select value={quickAddDependencyTaskId} onChange={(e) => setQuickAddDependencyTaskId(e.target.value)} className="inline-task-select">
               <option value="">No dependency</option>
               {sortedTasks.map((task) => (
@@ -466,6 +614,7 @@ export function WeeklyPlanning() {
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
+            <input type="date" value={quickAddPlannedFor} onChange={(e) => setQuickAddPlannedFor(e.target.value)} className="inline-task-input" />
             <button onClick={handleQuickAdd} disabled={!quickAdd.trim()}>Add</button>
           </div>
           <button onClick={handleSuggestTop3} disabled={suggesting || tasks.length === 0}>

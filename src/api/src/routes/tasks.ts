@@ -18,6 +18,7 @@ function mapTask(row: Record<string, unknown>) {
     dependencyTaskId: row.dependency_task_id,
     dependencyStatus: row.dependency_status,
     recurrenceRule: row.recurrence_rule,
+    plannedFor: row.planned_for,
     timeboxMinutes: row.timebox_minutes,
     nextStep: row.next_step,
     top3Candidate: !!row.top3_candidate,
@@ -34,7 +35,7 @@ function nextRecurringDate(rule: string | null | undefined) {
   if (rule === 'daily') now.setDate(now.getDate() + 1);
   if (rule === 'weekly') now.setDate(now.getDate() + 7);
   if (rule === 'monthly') now.setMonth(now.getMonth() + 1);
-  return now.toISOString();
+  return now.toISOString().slice(0, 10);
 }
 
 tasksRouter.get('/', async (req, res) => {
@@ -57,6 +58,7 @@ tasksRouter.get('/', async (req, res) => {
 
 tasksRouter.get('/top3', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
+  const today = new Date().toISOString().slice(0, 10);
   const db = await getDb();
   const rows = await db.all<Record<string, unknown>>(`
     SELECT t.*, dep.status AS dependency_status
@@ -65,27 +67,29 @@ tasksRouter.get('/top3', async (req, res) => {
     WHERE t.user_id = ?
       AND t.status IN ('open', 'in_progress', 'paused')
       AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+      AND (t.planned_for IS NULL OR t.planned_for <= ?)
     ORDER BY t.top3_candidate DESC, COALESCE(t.top3_rank, 999999) ASC, t.created_at ASC LIMIT 3
-  `, [userId]);
+  `, [userId, today]);
   res.json(rows.map(mapTask));
 });
 
 tasksRouter.post('/', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
-  const { title, goalId, playbookId, type, dependencyTaskId, recurrenceRule, timeboxMinutes, nextStep } = req.body;
+  const { title, goalId, playbookId, type, dependencyTaskId, recurrenceRule, plannedFor, timeboxMinutes, nextStep } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
   const id = uuidv4();
   const db = await getDb();
   await db.run(`
-    INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, timebox_minutes, next_step)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [id, userId, goalId ?? null, playbookId ?? null, title, type ?? 'one_off', dependencyTaskId ?? null, recurrenceRule ?? null, timeboxMinutes ?? null, nextStep ?? null]);
+    INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, planned_for, timebox_minutes, next_step)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [id, userId, goalId ?? null, playbookId ?? null, title, type ?? 'one_off', dependencyTaskId ?? null, recurrenceRule ?? null, plannedFor ?? null, timeboxMinutes ?? null, nextStep ?? null]);
   const row = await db.get<Record<string, unknown>>('SELECT * FROM tasks WHERE id = ?', [id]);
   res.status(201).json(mapTask(row!));
 });
 
 tasksRouter.post('/ai-suggest-top3', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
+  const today = new Date().toISOString().slice(0, 10);
   const db = await getDb();
 
   const rows = await db.all<{ id: string; title: string; status: string; type: string; created_at: string }>(`
@@ -93,8 +97,9 @@ tasksRouter.post('/ai-suggest-top3', async (req, res) => {
     FROM tasks t
     LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
     WHERE t.user_id = ? AND t.status = 'open' AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+      AND (t.planned_for IS NULL OR t.planned_for <= ?)
     ORDER BY t.created_at ASC
-  `, [userId]);
+  `, [userId, today]);
 
   try {
     const { taskIds, explanation } = await suggestTop3(rows.map((r) => ({ ...r, createdAt: r.created_at })));
@@ -115,6 +120,7 @@ tasksRouter.post('/ai-suggest-top3', async (req, res) => {
 
 tasksRouter.post('/ai-reprioritize-top3', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
+  const today = new Date().toISOString().slice(0, 10);
   const { trigger, taskId, lowEnergy } = req.body as { trigger?: 'paused' | 'not_today'; taskId?: string; lowEnergy?: boolean };
   if (!trigger || !taskId) return res.status(400).json({ error: 'trigger and taskId required' });
 
@@ -129,8 +135,9 @@ tasksRouter.post('/ai-reprioritize-top3', async (req, res) => {
     FROM tasks t
     LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
     WHERE t.user_id = ? AND t.status = 'open' AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+      AND (t.planned_for IS NULL OR t.planned_for <= ?)
     ORDER BY t.created_at ASC
-  `, [userId]);
+  `, [userId, today]);
 
   try {
     const { taskIds, explanation } = await reprioritizeTop3({
@@ -207,17 +214,18 @@ tasksRouter.post('/weekly-review', async (req, res) => {
 tasksRouter.patch('/:id', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const { id } = req.params;
-  const { title, status, nextStep, top3Candidate, top3Rank, colorHex, dependencyTaskId, recurrenceRule, pausedUntil } = req.body;
+  const { title, status, goalId, nextStep, top3Candidate, top3Rank, colorHex, dependencyTaskId, recurrenceRule, plannedFor, pausedUntil } = req.body;
   const updates: string[] = [];
   const values: unknown[] = [];
   const db = await getDb();
-  const existing = await db.get<{ user_id: string; goal_id: string | null; playbook_id: string | null; title: string; type: string; dependency_task_id: string | null; recurrence_rule: string | null; timebox_minutes: number | null; next_step: string | null; color_hex: string | null }>(
+  const existing = await db.get<{ user_id: string; goal_id: string | null; playbook_id: string | null; title: string; type: string; dependency_task_id: string | null; recurrence_rule: string | null; planned_for: string | null; timebox_minutes: number | null; next_step: string | null; color_hex: string | null }>(
     'SELECT * FROM tasks WHERE id = ? AND user_id = ?',
     [id, userId],
   );
   if (!existing) return res.status(404).json({ error: 'Task not found' });
   if (title !== undefined) { updates.push('title = ?'); values.push(title); }
   if (status !== undefined) { updates.push('status = ?'); values.push(status); if (status === 'done') { updates.push('completed_at = ?'); values.push(new Date().toISOString()); } }
+  if (goalId !== undefined) { updates.push('goal_id = ?'); values.push(goalId); }
   if (nextStep !== undefined) { updates.push('next_step = ?'); values.push(nextStep); }
   if (top3Candidate !== undefined) {
     updates.push('top3_candidate = ?');
@@ -231,6 +239,7 @@ tasksRouter.patch('/:id', async (req, res) => {
   if (colorHex !== undefined) { updates.push('color_hex = ?'); values.push(colorHex); }
   if (dependencyTaskId !== undefined) { updates.push('dependency_task_id = ?'); values.push(dependencyTaskId); }
   if (recurrenceRule !== undefined) { updates.push('recurrence_rule = ?'); values.push(recurrenceRule); }
+  if (plannedFor !== undefined) { updates.push('planned_for = ?'); values.push(plannedFor); }
   if (pausedUntil !== undefined) { updates.push('paused_until = ?'); values.push(pausedUntil); }
   if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
   values.push(id, userId);
@@ -238,8 +247,8 @@ tasksRouter.patch('/:id', async (req, res) => {
   if (status === 'done' && existing.recurrence_rule) {
     const nextId = uuidv4();
     await db.run(
-      `INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, timebox_minutes, next_step, color_hex, paused_until)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, planned_for, timebox_minutes, next_step, color_hex, paused_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nextId,
         userId,
@@ -249,10 +258,11 @@ tasksRouter.patch('/:id', async (req, res) => {
         existing.type,
         dependencyTaskId !== undefined ? dependencyTaskId : existing.dependency_task_id,
         recurrenceRule !== undefined ? recurrenceRule : existing.recurrence_rule,
+        nextRecurringDate(recurrenceRule !== undefined ? recurrenceRule : existing.recurrence_rule),
         existing.timebox_minutes,
         nextStep !== undefined ? nextStep : existing.next_step,
         colorHex !== undefined ? colorHex : existing.color_hex,
-        nextRecurringDate(recurrenceRule !== undefined ? recurrenceRule : existing.recurrence_rule),
+        null,
       ],
     );
   }
