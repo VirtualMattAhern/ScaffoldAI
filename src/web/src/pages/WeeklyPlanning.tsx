@@ -8,6 +8,9 @@ type Task = {
   status: string;
   type: string;
   goalId?: string;
+  dependencyTaskId?: string | null;
+  dependencyStatus?: string | null;
+  recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null;
   top3Candidate: boolean;
   top3Rank?: number | null;
   colorHex?: string | null;
@@ -45,10 +48,14 @@ export function WeeklyPlanning() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskStatus, setEditTaskStatus] = useState('open');
+  const [editDependencyTaskId, setEditDependencyTaskId] = useState<string>('');
+  const [editRecurrenceRule, setEditRecurrenceRule] = useState<string>('');
   const [review, setReview] = useState<WeeklyReview | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [recording, setRecording] = useState(false);
   const recognitionRef = useRef<InstanceType<SpeechRecognitionCtor> | null>(null);
+  const [quickAddDependencyTaskId, setQuickAddDependencyTaskId] = useState('');
+  const [quickAddRecurrenceRule, setQuickAddRecurrenceRule] = useState('');
 
   const loadTasks = () => {
     const params: { status?: string; type?: string } = {};
@@ -122,8 +129,15 @@ export function WeeklyPlanning() {
     if (!title) return;
     setQuickAdd('');
     try {
-      const task = await api.tasks.create({ title, type: 'one_off' }) as Task;
+      const task = await api.tasks.create({
+        title,
+        type: quickAddRecurrenceRule ? 'repeat' : 'one_off',
+        dependencyTaskId: quickAddDependencyTaskId || undefined,
+        recurrenceRule: (quickAddRecurrenceRule || undefined) as 'daily' | 'weekly' | 'monthly' | undefined,
+      }) as Task;
       setTasks((prev) => [...prev, task]);
+      setQuickAddDependencyTaskId('');
+      setQuickAddRecurrenceRule('');
     } catch (err) {
       setHelperMessage(err instanceof Error ? err.message : 'Failed to add task');
     }
@@ -133,14 +147,29 @@ export function WeeklyPlanning() {
     setEditingTaskId(task.id);
     setEditTaskTitle(task.title);
     setEditTaskStatus(task.status);
+    setEditDependencyTaskId(task.dependencyTaskId ?? '');
+    setEditRecurrenceRule(task.recurrenceRule ?? '');
   };
 
   const handleSaveTaskEdit = async (taskId: string) => {
     try {
-      await api.tasks.update(taskId, { title: editTaskTitle.trim(), status: editTaskStatus });
+      await api.tasks.update(taskId, {
+        title: editTaskTitle.trim(),
+        status: editTaskStatus,
+        dependencyTaskId: editDependencyTaskId || null,
+        recurrenceRule: (editRecurrenceRule || null) as 'daily' | 'weekly' | 'monthly' | null,
+      });
       setTasks((prev) =>
         prev.map((task) =>
-          task.id === taskId ? { ...task, title: editTaskTitle.trim(), status: editTaskStatus } : task,
+          task.id === taskId
+            ? {
+                ...task,
+                title: editTaskTitle.trim(),
+                status: editTaskStatus,
+                dependencyTaskId: editDependencyTaskId || null,
+                recurrenceRule: (editRecurrenceRule || null) as 'daily' | 'weekly' | 'monthly' | null,
+              }
+            : task,
         ),
       );
       setEditingTaskId(null);
@@ -332,11 +361,27 @@ export function WeeklyPlanning() {
                     <div className="task-row-main">
                       <span className="task-color-dot" style={{ background: t.colorHex || 'transparent', borderColor: t.colorHex ? t.colorHex : 'var(--border)' }} />
                       {editingTaskId === t.id ? (
-                        <input
-                          value={editTaskTitle}
-                          onChange={(e) => setEditTaskTitle(e.target.value)}
-                          className="inline-task-input"
-                        />
+                        <div className="inline-task-stack">
+                          <input
+                            value={editTaskTitle}
+                            onChange={(e) => setEditTaskTitle(e.target.value)}
+                            className="inline-task-input"
+                          />
+                          <div className="inline-task-meta-row">
+                            <select value={editDependencyTaskId} onChange={(e) => setEditDependencyTaskId(e.target.value)} className="inline-task-select">
+                              <option value="">No dependency</option>
+                              {sortedTasks.filter((task) => task.id !== t.id).map((task) => (
+                                <option key={task.id} value={task.id}>{task.title}</option>
+                              ))}
+                            </select>
+                            <select value={editRecurrenceRule} onChange={(e) => setEditRecurrenceRule(e.target.value)} className="inline-task-select">
+                              <option value="">One-off</option>
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                            </select>
+                          </div>
+                        </div>
                       ) : (
                         <button type="button" className="inline-task-trigger" onClick={() => handleEditTask(t)}>
                           {t.title}
@@ -360,6 +405,16 @@ export function WeeklyPlanning() {
                   <td title={`Task type: ${t.type.replace('_', ' ')}`}>{t.type.replace('_', ' ')}</td>
                   <td>
                     <div className="task-row-actions">
+                      {t.dependencyTaskId && (
+                        <span className="task-inline-pill" title={`Blocked until dependency is done${t.dependencyStatus ? ` (${t.dependencyStatus})` : ''}`}>
+                          Depends on task
+                        </span>
+                      )}
+                      {t.recurrenceRule && (
+                        <span className="task-inline-pill" title="Recurring task">
+                          Repeats {t.recurrenceRule}
+                        </span>
+                      )}
                       <select
                         aria-label={`Color for ${t.title}`}
                         value={t.colorHex ?? ''}
@@ -399,6 +454,18 @@ export function WeeklyPlanning() {
               onChange={(e) => setQuickAdd(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && quickAdd.trim()) handleQuickAdd(); }}
             />
+            <select value={quickAddDependencyTaskId} onChange={(e) => setQuickAddDependencyTaskId(e.target.value)} className="inline-task-select">
+              <option value="">No dependency</option>
+              {sortedTasks.map((task) => (
+                <option key={task.id} value={task.id}>{task.title}</option>
+              ))}
+            </select>
+            <select value={quickAddRecurrenceRule} onChange={(e) => setQuickAddRecurrenceRule(e.target.value)} className="inline-task-select">
+              <option value="">One-off</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
             <button onClick={handleQuickAdd} disabled={!quickAdd.trim()}>Add</button>
           </div>
           <button onClick={handleSuggestTop3} disabled={suggesting || tasks.length === 0}>

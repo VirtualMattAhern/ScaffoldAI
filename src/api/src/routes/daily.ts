@@ -13,9 +13,11 @@ dailyRouter.get('/helper', async (req, res) => {
   const db = await getDb();
 
   const tasks = await db.all<{ id: string; title: string; status: string }>(`
-    SELECT id, title, status FROM tasks
-    WHERE user_id = ? AND status IN ('open', 'in_progress', 'paused')
-    ORDER BY top3_candidate DESC, created_at ASC
+    SELECT t.id, t.title, t.status FROM tasks t
+    LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
+    WHERE t.user_id = ? AND t.status IN ('open', 'in_progress', 'paused')
+      AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+    ORDER BY t.top3_candidate DESC, COALESCE(t.top3_rank, 999999) ASC, t.created_at ASC
     LIMIT 3
   `, [userId]);
 

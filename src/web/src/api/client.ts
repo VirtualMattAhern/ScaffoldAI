@@ -55,11 +55,11 @@ export const api = {
       if (params?.status) q.set('status', params.status);
       if (params?.type) q.set('type', params.type);
       const query = q.toString();
-      return request<{ id: string; title: string; status: string; type: string; goalId?: string; nextStep?: string; top3Candidate: boolean; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>(`/tasks${query ? `?${query}` : ''}`);
+      return request<{ id: string; title: string; status: string; type: string; goalId?: string; dependencyTaskId?: string | null; dependencyStatus?: string | null; recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null; nextStep?: string; top3Candidate: boolean; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>(`/tasks${query ? `?${query}` : ''}`);
     },
-    top3: () => request<{ id: string; title: string; status: string; nextStep?: string; timeboxMinutes?: number; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>('/tasks/top3'),
-    create: (data: { title: string; goalId?: string; type?: string; nextStep?: string }) => request('/tasks', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id: string, data: { title?: string; status?: string; nextStep?: string; top3Candidate?: boolean; top3Rank?: number | null; colorHex?: string | null; pausedUntil?: string }) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    top3: () => request<{ id: string; title: string; status: string; dependencyTaskId?: string | null; dependencyStatus?: string | null; recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null; nextStep?: string; timeboxMinutes?: number; top3Rank?: number | null; colorHex?: string | null; createdAt: string }[]>('/tasks/top3'),
+    create: (data: { title: string; goalId?: string; type?: string; dependencyTaskId?: string | null; recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null; nextStep?: string }) => request('/tasks', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { title?: string; status?: string; dependencyTaskId?: string | null; recurrenceRule?: 'daily' | 'weekly' | 'monthly' | null; nextStep?: string; top3Candidate?: boolean; top3Rank?: number | null; colorHex?: string | null; pausedUntil?: string }) => request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     aiSuggestTop3: () => request<{ taskIds: string[]; explanation: string }>('/tasks/ai-suggest-top3', { method: 'POST' }),
     reprioritizeTop3: (data: { trigger: 'paused' | 'not_today'; taskId: string; lowEnergy?: boolean }) => request<{ taskIds: string[]; explanation: string }>('/tasks/ai-reprioritize-top3', { method: 'POST', body: JSON.stringify(data) }),
     weeklyReview: () => request<{ summary: string; stats: { completed: number; started: number; paused: number; top3Count: number; playbooksUsed: number } }>('/tasks/weekly-review', { method: 'POST' }),

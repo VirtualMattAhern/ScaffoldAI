@@ -1,6 +1,6 @@
 # SkafoldAI — V3 & Future Feature Ideas
 
-**Last updated:** 2026-03-20 UTC  
+**Last updated:** 2026-03-22 UTC  
 
 **Master backlog:** [FEATURE_TRACKER.md](../FEATURE_TRACKER.md) §2 — every pending item with **target release** (V2 / V2.1 / V3), **priority** (P0–P3), and **suggested order** for sprint grouping.
 
@@ -232,6 +232,12 @@ Many items originally tagged **Add to V1** are **already shipped** (e.g. transit
 | **Trust** | Backups, deeper security review | P2 |
 
 Full rows: **FEATURE_TRACKER.md §2** (columns: target release, value, P0–P3, suggested order).
+
+## Current V3 progress
+
+| Item | Status | Notes |
+|------|--------|-------|
+| **P-E1** Task dependencies + recurring tasks | 🚧 In progress | First slice is built: dependency fields, recurrence metadata, blocked-task filtering for Top 3, recurring rollover on completion, and Weekly UI controls. Still needs deeper scheduling rules and broader UX polish. |
 
 ---
 

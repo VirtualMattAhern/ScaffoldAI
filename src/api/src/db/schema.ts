@@ -53,6 +53,8 @@ async function initSqliteSchema() {
       title TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'paused', 'done')),
       type TEXT NOT NULL CHECK (type IN ('one_off', 'repeat', 'playbook')),
+      dependency_task_id TEXT,
+      recurrence_rule TEXT CHECK (recurrence_rule IN ('daily', 'weekly', 'monthly')),
       timebox_minutes INTEGER,
       next_step TEXT,
       top3_candidate INTEGER DEFAULT 0,
@@ -63,7 +65,8 @@ async function initSqliteSchema() {
       paused_until TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (goal_id) REFERENCES goals(id),
-      FOREIGN KEY (playbook_id) REFERENCES playbooks(id)
+      FOREIGN KEY (playbook_id) REFERENCES playbooks(id),
+      FOREIGN KEY (dependency_task_id) REFERENCES tasks(id)
     );
     CREATE TABLE IF NOT EXISTS decisions (
       id TEXT PRIMARY KEY,
@@ -117,6 +120,8 @@ async function initSqliteSchema() {
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN focus_mode INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN dark_mode INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE goals ADD COLUMN color_hex TEXT').run(); } catch {}
+  try { db.prepare('ALTER TABLE tasks ADD COLUMN dependency_task_id TEXT').run(); } catch {}
+  try { db.prepare('ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN top3_rank INTEGER').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN color_hex TEXT').run(); } catch {}
   db.close();

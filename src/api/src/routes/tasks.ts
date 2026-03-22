@@ -15,6 +15,9 @@ function mapTask(row: Record<string, unknown>) {
     title: row.title,
     status: row.status,
     type: row.type,
+    dependencyTaskId: row.dependency_task_id,
+    dependencyStatus: row.dependency_status,
+    recurrenceRule: row.recurrence_rule,
     timeboxMinutes: row.timebox_minutes,
     nextStep: row.next_step,
     top3Candidate: !!row.top3_candidate,
@@ -26,14 +29,27 @@ function mapTask(row: Record<string, unknown>) {
   };
 }
 
+function nextRecurringDate(rule: string | null | undefined) {
+  const now = new Date();
+  if (rule === 'daily') now.setDate(now.getDate() + 1);
+  if (rule === 'weekly') now.setDate(now.getDate() + 7);
+  if (rule === 'monthly') now.setMonth(now.getMonth() + 1);
+  return now.toISOString();
+}
+
 tasksRouter.get('/', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const { status, type } = req.query;
-  let sql = 'SELECT * FROM tasks WHERE user_id = ?';
+  let sql = `
+    SELECT t.*, dep.status AS dependency_status
+    FROM tasks t
+    LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
+    WHERE t.user_id = ?
+  `;
   const params: (string | number)[] = [userId];
-  if (status) { sql += ' AND status = ?'; params.push(status as string); }
-  if (type) { sql += ' AND type = ?'; params.push(type as string); }
-  sql += ' ORDER BY top3_candidate DESC, COALESCE(top3_rank, 999999) ASC, created_at ASC';
+  if (status) { sql += ' AND t.status = ?'; params.push(status as string); }
+  if (type) { sql += ' AND t.type = ?'; params.push(type as string); }
+  sql += ' ORDER BY t.top3_candidate DESC, COALESCE(t.top3_rank, 999999) ASC, t.created_at ASC';
   const db = await getDb();
   const rows = await db.all<Record<string, unknown>>(sql, params);
   res.json(rows.map(mapTask));
@@ -43,22 +59,27 @@ tasksRouter.get('/top3', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const db = await getDb();
   const rows = await db.all<Record<string, unknown>>(`
-    SELECT * FROM tasks WHERE user_id = ? AND status IN ('open', 'in_progress', 'paused')
-    ORDER BY top3_candidate DESC, COALESCE(top3_rank, 999999) ASC, created_at ASC LIMIT 3
+    SELECT t.*, dep.status AS dependency_status
+    FROM tasks t
+    LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
+    WHERE t.user_id = ?
+      AND t.status IN ('open', 'in_progress', 'paused')
+      AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+    ORDER BY t.top3_candidate DESC, COALESCE(t.top3_rank, 999999) ASC, t.created_at ASC LIMIT 3
   `, [userId]);
   res.json(rows.map(mapTask));
 });
 
 tasksRouter.post('/', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
-  const { title, goalId, playbookId, type, timeboxMinutes, nextStep } = req.body;
+  const { title, goalId, playbookId, type, dependencyTaskId, recurrenceRule, timeboxMinutes, nextStep } = req.body;
   if (!title) return res.status(400).json({ error: 'title required' });
   const id = uuidv4();
   const db = await getDb();
   await db.run(`
-    INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, timebox_minutes, next_step)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `, [id, userId, goalId ?? null, playbookId ?? null, title, type ?? 'one_off', timeboxMinutes ?? null, nextStep ?? null]);
+    INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, timebox_minutes, next_step)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [id, userId, goalId ?? null, playbookId ?? null, title, type ?? 'one_off', dependencyTaskId ?? null, recurrenceRule ?? null, timeboxMinutes ?? null, nextStep ?? null]);
   const row = await db.get<Record<string, unknown>>('SELECT * FROM tasks WHERE id = ?', [id]);
   res.status(201).json(mapTask(row!));
 });
@@ -68,9 +89,11 @@ tasksRouter.post('/ai-suggest-top3', async (req, res) => {
   const db = await getDb();
 
   const rows = await db.all<{ id: string; title: string; status: string; type: string; created_at: string }>(`
-    SELECT id, title, status, type, created_at FROM tasks
-    WHERE user_id = ? AND status = 'open'
-    ORDER BY created_at ASC
+    SELECT t.id, t.title, t.status, t.type, t.created_at
+    FROM tasks t
+    LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
+    WHERE t.user_id = ? AND t.status = 'open' AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+    ORDER BY t.created_at ASC
   `, [userId]);
 
   try {
@@ -102,9 +125,11 @@ tasksRouter.post('/ai-reprioritize-top3', async (req, res) => {
     ORDER BY COALESCE(top3_rank, 999999) ASC, created_at ASC
   `, [userId]);
   const candidateTasks = await db.all<{ id: string; title: string; status: string; type: string; created_at: string }>(`
-    SELECT id, title, status, type, created_at FROM tasks
-    WHERE user_id = ? AND status = 'open'
-    ORDER BY created_at ASC
+    SELECT t.id, t.title, t.status, t.type, t.created_at
+    FROM tasks t
+    LEFT JOIN tasks dep ON dep.id = t.dependency_task_id
+    WHERE t.user_id = ? AND t.status = 'open' AND (t.dependency_task_id IS NULL OR dep.status = 'done')
+    ORDER BY t.created_at ASC
   `, [userId]);
 
   try {
@@ -182,9 +207,15 @@ tasksRouter.post('/weekly-review', async (req, res) => {
 tasksRouter.patch('/:id', async (req, res) => {
   const userId = getUserId(req as Request & { userId?: string });
   const { id } = req.params;
-  const { title, status, nextStep, top3Candidate, top3Rank, colorHex, pausedUntil } = req.body;
+  const { title, status, nextStep, top3Candidate, top3Rank, colorHex, dependencyTaskId, recurrenceRule, pausedUntil } = req.body;
   const updates: string[] = [];
   const values: unknown[] = [];
+  const db = await getDb();
+  const existing = await db.get<{ user_id: string; goal_id: string | null; playbook_id: string | null; title: string; type: string; dependency_task_id: string | null; recurrence_rule: string | null; timebox_minutes: number | null; next_step: string | null; color_hex: string | null }>(
+    'SELECT * FROM tasks WHERE id = ? AND user_id = ?',
+    [id, userId],
+  );
+  if (!existing) return res.status(404).json({ error: 'Task not found' });
   if (title !== undefined) { updates.push('title = ?'); values.push(title); }
   if (status !== undefined) { updates.push('status = ?'); values.push(status); if (status === 'done') { updates.push('completed_at = ?'); values.push(new Date().toISOString()); } }
   if (nextStep !== undefined) { updates.push('next_step = ?'); values.push(nextStep); }
@@ -198,11 +229,32 @@ tasksRouter.patch('/:id', async (req, res) => {
   }
   if (top3Rank !== undefined) { updates.push('top3_rank = ?'); values.push(top3Rank); }
   if (colorHex !== undefined) { updates.push('color_hex = ?'); values.push(colorHex); }
+  if (dependencyTaskId !== undefined) { updates.push('dependency_task_id = ?'); values.push(dependencyTaskId); }
+  if (recurrenceRule !== undefined) { updates.push('recurrence_rule = ?'); values.push(recurrenceRule); }
   if (pausedUntil !== undefined) { updates.push('paused_until = ?'); values.push(pausedUntil); }
   if (updates.length === 0) return res.status(400).json({ error: 'No updates provided' });
   values.push(id, userId);
-  const db = await getDb();
   const result = await db.run(`UPDATE tasks SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`, values);
-  if (result.changes === 0) return res.status(404).json({ error: 'Task not found' });
+  if (status === 'done' && existing.recurrence_rule) {
+    const nextId = uuidv4();
+    await db.run(
+      `INSERT INTO tasks (id, user_id, goal_id, playbook_id, title, type, dependency_task_id, recurrence_rule, timebox_minutes, next_step, color_hex, paused_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nextId,
+        userId,
+        existing.goal_id,
+        existing.playbook_id,
+        title ?? existing.title,
+        existing.type,
+        dependencyTaskId !== undefined ? dependencyTaskId : existing.dependency_task_id,
+        recurrenceRule !== undefined ? recurrenceRule : existing.recurrence_rule,
+        existing.timebox_minutes,
+        nextStep !== undefined ? nextStep : existing.next_step,
+        colorHex !== undefined ? colorHex : existing.color_hex,
+        nextRecurringDate(recurrenceRule !== undefined ? recurrenceRule : existing.recurrence_rule),
+      ],
+    );
+  }
   res.json({ id });
 });

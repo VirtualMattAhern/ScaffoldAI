@@ -209,6 +209,30 @@
   color: var(--text);
 }
 
+.inline-task-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.inline-task-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.task-inline-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--skafold-slate-100);
+  color: var(--muted);
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+}
+
 .weekly-review-card {
   margin-top: 0.75rem;
   padding: 1rem;
