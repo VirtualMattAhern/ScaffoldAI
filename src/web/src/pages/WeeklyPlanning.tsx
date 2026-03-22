@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
 import './Screen.css';
 
@@ -86,12 +86,12 @@ export function WeeklyPlanning() {
   const [quickAddRecurrenceRule, setQuickAddRecurrenceRule] = useState('');
   const [quickAddPlannedFor, setQuickAddPlannedFor] = useState('');
 
-  const loadTasks = () => {
+  const loadTasks = useCallback(() => {
     const params: { status?: string; type?: string } = {};
     if (filterStatus) params.status = filterStatus;
     if (filterType) params.type = filterType;
     return api.tasks.list(Object.keys(params).length ? params : undefined);
-  };
+  }, [filterStatus, filterType]);
 
   const sortedTasks = useMemo(
     () =>
@@ -146,7 +146,7 @@ export function WeeklyPlanning() {
       setTasks(taskList);
       setGoals(goalList);
     }).finally(() => setLoading(false));
-  }, [filterStatus, filterType]);
+  }, [loadTasks]);
 
   useEffect(() => {
     const refresh = () => {
@@ -154,7 +154,7 @@ export function WeeklyPlanning() {
     };
     window.addEventListener('skafold:task-created', refresh);
     return () => window.removeEventListener('skafold:task-created', refresh);
-  }, [filterStatus, filterType]);
+  }, [loadTasks]);
 
   const handleSaveDump = () => {
     api.brainDump.save(brainDump);
@@ -316,7 +316,9 @@ export function WeeklyPlanning() {
     try {
       await api.tasks.update(id, { status: 'done' });
       setTasks((prev) => prev.filter((t) => t.id !== id));
-    } catch {}
+    } catch (err) {
+      setHelperMessage(err instanceof Error ? err.message : 'Failed to complete task');
+    }
   };
 
   const toggleSelect = (id: string) => {

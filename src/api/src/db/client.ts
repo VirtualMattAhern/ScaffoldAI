@@ -133,6 +133,11 @@ export async function getDb(): Promise<DbClient> {
   return _db;
 }
 
+export async function resetDbClient() {
+  if (_db) await _db.close();
+  _db = null;
+}
+
 export function isAzureSql(): boolean {
   return !!process.env.DATABASE_URL;
 }

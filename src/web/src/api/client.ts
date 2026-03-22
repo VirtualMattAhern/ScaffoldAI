@@ -14,7 +14,9 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const sessionToken = localStorage.getItem(SESSION_TOKEN_KEY);
     if (sessionToken) return { Authorization: `Bearer ${sessionToken}` };
-  } catch {}
+  } catch {
+    // localStorage may be unavailable in privacy-restricted contexts
+  }
   return {};
 }
 

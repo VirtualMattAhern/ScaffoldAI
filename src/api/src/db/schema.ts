@@ -145,3 +145,7 @@ export async function ensureSchema() {
     _schemaInitialized = true;
   }
 }
+
+export function resetSchemaState() {
+  _schemaInitialized = false;
+}
