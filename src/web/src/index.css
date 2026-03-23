@@ -26,6 +26,11 @@
   --skafold-radius-sm: 8px;
   --skafold-shadow: 0 2px 8px rgba(30, 58, 95, 0.06);
   --skafold-shadow-md: 0 4px 12px rgba(30, 58, 95, 0.08);
+  --theme-bg: var(--skafold-blue-50);
+  --theme-text: var(--skafold-slate-800);
+  --theme-muted: var(--skafold-slate-600);
+  --theme-border: var(--skafold-slate-200);
+  --theme-accent: var(--skafold-blue-700);
 
   color: var(--skafold-slate-800);
   background-color: var(--skafold-blue-50);
@@ -80,4 +85,28 @@ body {
   background: #0f172a;
   border-color: #475569;
   color: #e2e8f0;
+}
+
+.layout.theme-calm {
+  --theme-bg: #eef7ff;
+  --theme-text: #16314f;
+  --theme-muted: #54708c;
+  --theme-border: #cfe0f4;
+  --theme-accent: #2f6fed;
+}
+
+.layout.theme-focus {
+  --theme-bg: #f4f7fb;
+  --theme-text: #172033;
+  --theme-muted: #59667b;
+  --theme-border: #d6deea;
+  --theme-accent: #5b5bd6;
+}
+
+.layout.theme-warm {
+  --theme-bg: #fff7ef;
+  --theme-text: #40271c;
+  --theme-muted: #84624f;
+  --theme-border: #f0d7c2;
+  --theme-accent: #d97745;
 }

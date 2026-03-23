@@ -9,6 +9,8 @@ type Settings = {
   reduceMotion: boolean;
   focusMode: boolean;
   darkMode: boolean;
+  sensoryTheme: 'calm' | 'focus' | 'warm';
+  celebrationsEnabled: boolean;
 };
 
 const defaultSettings: Settings = {
@@ -18,6 +20,8 @@ const defaultSettings: Settings = {
   reduceMotion: false,
   focusMode: false,
   darkMode: false,
+  sensoryTheme: 'calm',
+  celebrationsEnabled: true,
 };
 
 const SettingsContext = createContext<{

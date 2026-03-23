@@ -86,8 +86,8 @@ These are **not required to call V2 feature-complete**. They matter when you set
 | P-E6 | V3 | Redis / caching layer | Scale + latency | P3 | Not needed at current scale. Add when usage/latency justifies infra complexity. |
 | P-E7 | V3 | Comprehensive structured logging / dashboards | Ops | P2 | **In progress:** structured JSON API logs, request IDs, route failure events, process-level error logging, and an observability guide are built. Still needs Azure dashboards, alert thresholds, and broader telemetry coverage. |
 | P-F1 | V3 | Body doubling mode | Differentiation, ADHD | P2 | Needs product design for check-in cadence, persistent companion UI, and tone testing. |
-| P-F2 | V3 | Sensory-friendly themes (“Calm”, “Focus”, “Warm”) | Sensory access | P2 | Needs theme system expansion, design exploration, and accessibility verification across modes. |
-| P-F3 | V3 | Celebration moments (opt-in; respect reduce motion) | Dopamine-safe wins | P3 | Needs subtle reward patterns that feel supportive, not gamified or overstimulating. |
+| P-F2 | V3 | Sensory-friendly themes (“Calm”, “Focus”, “Warm”) | Sensory access | P2 | **In progress:** persisted Calm/Focus/Warm themes are built with app-wide styling and settings controls. Still needs deeper surface-by-surface polish and accessibility verification across every screen/state combo. |
+| P-F3 | V3 | Celebration moments (opt-in; respect reduce motion) | Dopamine-safe wins | P3 | **In progress:** subtle opt-in completion feedback is built on Daily and respects reduce motion. Still needs broader trigger coverage and tuning so it stays supportive without becoming noisy. |
 | P-F4 | V3 | Persona-based onboarding | Conversion | P2 | Needs persona strategy, content variants, and measurement to prove onboarding lift. |
 | P-F5 | V3 | Shareable playbooks / templates | Viral loop | P3 | Needs import/export format, permissions/moderation rules, and template browsing UX. |
 | P-F6 | V3 | “Scaffolding score” / gentle usage insights | Show value; not punitive | P3 | Needs analytics model and careful framing so it motivates without judgment. |

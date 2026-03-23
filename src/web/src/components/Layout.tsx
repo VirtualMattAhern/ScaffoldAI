@@ -38,7 +38,7 @@ export function Layout() {
   const showHeader = !settings.focusMode || !isDaily;
   return (
     <div
-      className={`layout ${settings.highContrast ? 'high-contrast' : ''} ${settings.dyslexiaFont ? 'dyslexia-font' : ''} ${settings.reduceMotion ? 'reduce-motion' : ''} ${settings.darkMode ? 'dark-mode' : ''}`}
+      className={`layout theme-${settings.sensoryTheme} ${settings.highContrast ? 'high-contrast' : ''} ${settings.dyslexiaFont ? 'dyslexia-font' : ''} ${settings.reduceMotion ? 'reduce-motion' : ''} ${settings.darkMode ? 'dark-mode' : ''}`}
       style={{ fontSize: `${settings.fontSizePercent}%` }}
     >
       {showHeader && (

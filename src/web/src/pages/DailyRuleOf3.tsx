@@ -25,7 +25,9 @@ export function DailyRuleOf3() {
   const [transition, setTransition] = useState(false);
   const [lowEnergy, setLowEnergy] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helperRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const { settings, updateSettings } = useSettings();
@@ -71,7 +73,17 @@ export function DailyRuleOf3() {
       setTransition(true);
       setTimeout(() => setTransition(false), 5000);
     }, 5000);
-  }, [tasks, activeTaskId]);
+    if (settings.celebrationsEnabled) {
+      if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
+      const messages = [
+        'Nice work. One less thing pulling at your brain.',
+        'Done. That bit of momentum counts.',
+        'Good job. The day just got a little lighter.',
+      ];
+      setCelebrationMessage(messages[Math.floor(Math.random() * messages.length)]);
+      celebrationTimerRef.current = setTimeout(() => setCelebrationMessage(null), settings.reduceMotion ? 2200 : 3600);
+    }
+  }, [tasks, activeTaskId, settings.celebrationsEnabled, settings.reduceMotion]);
 
   const handleUndo = () => {
     if (!undoTask) return;
@@ -143,6 +155,12 @@ export function DailyRuleOf3() {
         <div className="undo-toast">
           <span>"{undoTask.title}" marked done.</span>
           <button onClick={handleUndo}>Undo</button>
+        </div>
+      )}
+
+      {celebrationMessage && (
+        <div className={`celebration-banner ${settings.reduceMotion ? 'is-still' : ''}`} aria-live="polite">
+          <span>{celebrationMessage}</span>
         </div>
       )}
 

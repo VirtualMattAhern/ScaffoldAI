@@ -85,8 +85,8 @@ export const api = {
     },
   },
   settings: {
-    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean; reduceMotion: boolean; focusMode: boolean; darkMode: boolean }>('/settings'),
-    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean; reduceMotion?: boolean; focusMode?: boolean; darkMode?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
+    get: () => request<{ highContrast: boolean; fontSizePercent: number; dyslexiaFont: boolean; reduceMotion: boolean; focusMode: boolean; darkMode: boolean; sensoryTheme: 'calm' | 'focus' | 'warm'; celebrationsEnabled: boolean }>('/settings'),
+    update: (data: { highContrast?: boolean; fontSizePercent?: number; dyslexiaFont?: boolean; reduceMotion?: boolean; focusMode?: boolean; darkMode?: boolean; sensoryTheme?: 'calm' | 'focus' | 'warm'; celebrationsEnabled?: boolean }) => request('/settings', { method: 'PATCH', body: JSON.stringify(data) }),
   },
   guided: {
     getSubSteps: (taskId: string) => request<{ steps: string[] }>(`/guided/${taskId}/substeps`),

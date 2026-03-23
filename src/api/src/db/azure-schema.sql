@@ -102,6 +102,8 @@ CREATE TABLE user_settings (
   reduce_motion INT DEFAULT 0,
   focus_mode INT DEFAULT 0,
   dark_mode INT DEFAULT 0,
+  sensory_theme NVARCHAR(20) DEFAULT 'calm',
+  celebrations_enabled INT DEFAULT 1,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -109,6 +111,8 @@ CREATE TABLE user_settings (
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'reduce_motion') ALTER TABLE user_settings ADD reduce_motion INT DEFAULT 0;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'focus_mode') ALTER TABLE user_settings ADD focus_mode INT DEFAULT 0;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'dark_mode') ALTER TABLE user_settings ADD dark_mode INT DEFAULT 0;
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'sensory_theme') ALTER TABLE user_settings ADD sensory_theme NVARCHAR(20) DEFAULT 'calm';
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('user_settings') AND name = 'celebrations_enabled') ALTER TABLE user_settings ADD celebrations_enabled INT DEFAULT 1;
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('goals') AND name = 'color_hex') ALTER TABLE goals ADD color_hex NVARCHAR(20);
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'dependency_task_id') ALTER TABLE tasks ADD dependency_task_id NVARCHAR(36);
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tasks') AND name = 'recurrence_rule') ALTER TABLE tasks ADD recurrence_rule NVARCHAR(20);

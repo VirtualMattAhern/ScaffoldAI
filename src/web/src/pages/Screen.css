@@ -133,6 +133,36 @@
   margin: 1rem 0;
 }
 
+.celebration-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, white);
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, white), rgba(255, 255, 255, 0.95));
+  color: var(--text);
+  box-shadow: var(--skafold-shadow);
+  animation: celebration-glow 3.2s ease-out forwards;
+}
+
+.celebration-banner.is-still {
+  animation: none;
+}
+
+@keyframes celebration-glow {
+  0% {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  14% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .goal-progress-grid,
 .weekly-calendar-grid {
   display: grid;

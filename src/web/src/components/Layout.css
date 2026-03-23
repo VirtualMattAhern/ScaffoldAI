@@ -2,11 +2,11 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  --bg: var(--skafold-blue-50);
-  --text: var(--skafold-slate-800);
-  --muted: var(--skafold-slate-600);
-  --border: var(--skafold-slate-200);
-  --accent: var(--skafold-blue-700);
+  --bg: var(--theme-bg);
+  --text: var(--theme-text);
+  --muted: var(--theme-muted);
+  --border: var(--theme-border);
+  --accent: var(--theme-accent);
   background: var(--bg);
 }
 

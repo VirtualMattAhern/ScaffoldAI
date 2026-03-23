@@ -106,6 +106,8 @@ async function initSqliteSchema() {
       reduce_motion INTEGER DEFAULT 0,
       focus_mode INTEGER DEFAULT 0,
       dark_mode INTEGER DEFAULT 0,
+      sensory_theme TEXT DEFAULT 'calm',
+      celebrations_enabled INTEGER DEFAULT 1,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id);
@@ -120,6 +122,8 @@ async function initSqliteSchema() {
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN reduce_motion INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN focus_mode INTEGER DEFAULT 0').run(); } catch {}
   try { db.prepare('ALTER TABLE user_settings ADD COLUMN dark_mode INTEGER DEFAULT 0').run(); } catch {}
+  try { db.prepare(`ALTER TABLE user_settings ADD COLUMN sensory_theme TEXT DEFAULT 'calm'`).run(); } catch {}
+  try { db.prepare('ALTER TABLE user_settings ADD COLUMN celebrations_enabled INTEGER DEFAULT 1').run(); } catch {}
   try { db.prepare('ALTER TABLE goals ADD COLUMN color_hex TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN dependency_task_id TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE tasks ADD COLUMN recurrence_rule TEXT').run(); } catch {}

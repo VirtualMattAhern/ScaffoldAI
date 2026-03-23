@@ -81,6 +81,31 @@ export function Settings() {
         </label>
         <p className="setting-hint">Dark theme for reduced eye strain.</p>
       </section>
+
+      <section className="settings-section">
+        <label>Sensory-friendly theme</label>
+        <select
+          value={settings.sensoryTheme}
+          onChange={(e) => updateSettings({ sensoryTheme: e.target.value as 'calm' | 'focus' | 'warm' })}
+        >
+          <option value="calm">Calm</option>
+          <option value="focus">Focus</option>
+          <option value="warm">Warm</option>
+        </select>
+        <p className="setting-hint">Switches the app palette to match the kind of energy you want from the interface.</p>
+      </section>
+
+      <section className="settings-section">
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.celebrationsEnabled}
+            onChange={(e) => updateSettings({ celebrationsEnabled: e.target.checked })}
+          />
+          Gentle celebration moments
+        </label>
+        <p className="setting-hint">Opt in to subtle “nice work” feedback when you finish tasks. Automatically stays calmer with reduce motion.</p>
+      </section>
     </div>
   );
 }
