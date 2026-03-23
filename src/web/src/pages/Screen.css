@@ -163,6 +163,83 @@
   }
 }
 
+.body-doubling-panel {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--skafold-radius);
+  background: color-mix(in srgb, var(--accent) 8%, white);
+  box-shadow: var(--skafold-shadow);
+}
+
+.body-doubling-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.body-doubling-head h2 {
+  margin: 0 0 0.2rem;
+}
+
+.body-doubling-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+  margin-top: 0.85rem;
+}
+
+.body-doubling-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.body-doubling-controls select,
+.body-doubling-controls input {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--skafold-white);
+  color: var(--text);
+  font: inherit;
+}
+
+.body-doubling-timer {
+  min-width: 86px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+  background: var(--skafold-white);
+  border: 1px solid var(--border);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.body-doubling-message {
+  margin-top: 0.85rem;
+  padding: 0.8rem 0.9rem;
+  border-left: 4px solid var(--accent);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 12px;
+  color: var(--text);
+  animation: celebration-glow 0.45s ease-out;
+}
+
+.body-doubling-message.is-still {
+  animation: none;
+}
+
+.body-stop-btn,
+.body-active-btn {
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
 .goal-progress-grid,
 .weekly-calendar-grid {
   display: grid;

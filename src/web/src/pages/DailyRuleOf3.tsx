@@ -15,6 +15,14 @@ type Task = {
   createdAt: string;
 };
 
+const BODY_DOUBLE_MESSAGES = [
+  'I am here with you. Just stay with the next small move.',
+  'No need to solve the whole day. Keep your attention on this one task.',
+  'A tiny bit of progress still counts. Keep going.',
+  'If your brain wandered, that is okay. Come back to the next visible step.',
+  'You do not need perfect focus. Just another small stretch of effort.',
+];
+
 export function DailyRuleOf3() {
   const [focusSentence, setFocusSentence] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -26,8 +34,16 @@ export function DailyRuleOf3() {
   const [lowEnergy, setLowEnergy] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
+  const [bodyDoublingTaskId, setBodyDoublingTaskId] = useState<string | null>(null);
+  const [bodyDoublingActive, setBodyDoublingActive] = useState(false);
+  const [bodySessionMinutes, setBodySessionMinutes] = useState(20);
+  const [bodyCheckInMinutes, setBodyCheckInMinutes] = useState(5);
+  const [bodySecondsLeft, setBodySecondsLeft] = useState(20 * 60);
+  const [bodyMessage, setBodyMessage] = useState('Pick one task and let Skafold sit with you while you work.');
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bodyTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const bodyCheckInRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const helperRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const { settings, updateSettings } = useSettings();
@@ -47,12 +63,58 @@ export function DailyRuleOf3() {
     api.daily.helper({ activeTaskId: activeTaskId ?? undefined, lowEnergy: !!lowEnergy }).then((r) => setHelperText(r.text)).catch(() => setHelperText(''));
   }, [tasks, activeTaskId, lowEnergy]);
 
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
+      if (bodyTickRef.current) clearInterval(bodyTickRef.current);
+      if (bodyCheckInRef.current) clearInterval(bodyCheckInRef.current);
+    };
+  }, []);
+
   const handleSaveFocus = () => { api.focusSentence.save(focusSentence); };
 
   const handleSuggestFocus = async () => {
     const { sentence } = await api.focusSentence.suggest();
     setFocusSentence(sentence);
     api.focusSentence.save(sentence);
+  };
+
+  const stopBodyDoubling = useCallback((message?: string) => {
+    if (bodyTickRef.current) clearInterval(bodyTickRef.current);
+    if (bodyCheckInRef.current) clearInterval(bodyCheckInRef.current);
+    bodyTickRef.current = null;
+    bodyCheckInRef.current = null;
+    setBodyDoublingActive(false);
+    if (message) setBodyMessage(message);
+  }, []);
+
+  const startBodyDoubling = (taskId: string) => {
+    const selected = tasks.find((task) => task.id === taskId);
+    if (!selected) return;
+    stopBodyDoubling();
+    setBodyDoublingTaskId(taskId);
+    setActiveTaskId(taskId);
+    setBodyDoublingActive(true);
+    setBodySecondsLeft(bodySessionMinutes * 60);
+    setBodyMessage(`Body doubling with "${selected.title}". Start with the next visible step.`);
+
+    bodyTickRef.current = setInterval(() => {
+      setBodySecondsLeft((prev) => {
+        if (prev <= 1) {
+          stopBodyDoubling('Session complete. Pause, breathe, and choose whether to keep going or wrap here.');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    bodyCheckInRef.current = setInterval(() => {
+      const selectedTask = tasks.find((task) => task.id === taskId);
+      const prefix = lowEnergy ? 'Low-energy check-in: ' : '';
+      const nextMessage = BODY_DOUBLE_MESSAGES[Math.floor(Math.random() * BODY_DOUBLE_MESSAGES.length)];
+      setBodyMessage(`${prefix}${selectedTask ? `"${selectedTask.title}": ` : ''}${nextMessage}`);
+    }, Math.max(1, bodyCheckInMinutes) * 60 * 1000);
   };
 
   const handleStart = (id: string) => {
@@ -83,7 +145,10 @@ export function DailyRuleOf3() {
       setCelebrationMessage(messages[Math.floor(Math.random() * messages.length)]);
       celebrationTimerRef.current = setTimeout(() => setCelebrationMessage(null), settings.reduceMotion ? 2200 : 3600);
     }
-  }, [tasks, activeTaskId, settings.celebrationsEnabled, settings.reduceMotion]);
+    if (bodyDoublingTaskId === id) {
+      stopBodyDoubling('Nice work. You finished the task and closed the body-doubling session too.');
+    }
+  }, [tasks, activeTaskId, settings.celebrationsEnabled, settings.reduceMotion, bodyDoublingTaskId, stopBodyDoubling]);
 
   const handleUndo = () => {
     if (!undoTask) return;
@@ -103,6 +168,9 @@ export function DailyRuleOf3() {
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'paused' } : t)));
     });
     if (activeTaskId === id) setActiveTaskId(null);
+    if (bodyDoublingTaskId === id) {
+      stopBodyDoubling('Body doubling paused with the task. Pick it back up when you are ready.');
+    }
   };
 
   const handleNotToday = async (id: string) => {
@@ -116,6 +184,9 @@ export function DailyRuleOf3() {
       setTasks((prev) => prev.filter((t) => t.id !== id));
     }
     if (activeTaskId === id) setActiveTaskId(null);
+    if (bodyDoublingTaskId === id) {
+      stopBodyDoubling('Not today is okay. Your companion session is closed for now.');
+    }
   };
 
   const handleReorder = async (taskId: string, targetIndex: number) => {
@@ -163,6 +234,46 @@ export function DailyRuleOf3() {
           <span>{celebrationMessage}</span>
         </div>
       )}
+
+      <section className="body-doubling-panel" aria-live="polite">
+        <div className="body-doubling-head">
+          <div>
+            <h2>Body doubling</h2>
+            <p className="subtitle">A calm companion for one task at a time, with short check-ins instead of pressure.</p>
+          </div>
+          {bodyDoublingActive && (
+            <button type="button" className="body-stop-btn" onClick={() => stopBodyDoubling('Session stopped. You can start another one whenever you want.')}>
+              Stop session
+            </button>
+          )}
+        </div>
+        <div className="body-doubling-controls">
+          <label>
+            Session
+            <select value={bodySessionMinutes} onChange={(e) => setBodySessionMinutes(Number(e.target.value))} disabled={bodyDoublingActive}>
+              <option value={10}>10 min</option>
+              <option value={15}>15 min</option>
+              <option value={20}>20 min</option>
+              <option value={25}>25 min</option>
+              <option value={40}>40 min</option>
+            </select>
+          </label>
+          <label>
+            Check-in
+            <select value={bodyCheckInMinutes} onChange={(e) => setBodyCheckInMinutes(Number(e.target.value))} disabled={bodyDoublingActive}>
+              <option value={3}>Every 3 min</option>
+              <option value={5}>Every 5 min</option>
+              <option value={10}>Every 10 min</option>
+            </select>
+          </label>
+          <div className="body-doubling-timer" title="Remaining session time">
+            {formatDuration(bodySecondsLeft)}
+          </div>
+        </div>
+        <div className={`body-doubling-message ${settings.reduceMotion ? 'is-still' : ''}`}>
+          {bodyMessage}
+        </div>
+      </section>
 
       <section className="focus-sentence">
         <label htmlFor="focus">Focus sentence</label>
@@ -216,6 +327,9 @@ export function DailyRuleOf3() {
                 </div>
                 <div className="task-actions">
                   <button onClick={() => handleStart(t.id)}>Start</button>
+                  <button type="button" onClick={() => startBodyDoubling(t.id)} className={bodyDoublingTaskId === t.id && bodyDoublingActive ? 'body-active-btn' : ''}>
+                    {bodyDoublingTaskId === t.id && bodyDoublingActive ? 'Doubling now' : 'Body double'}
+                  </button>
                   <button type="button" onClick={() => handleReorder(t.id, Math.max(0, i - 1))} disabled={i === 0}>Up</button>
                   <button type="button" onClick={() => handleReorder(t.id, Math.min(tasks.length - 1, i + 1))} disabled={i === tasks.length - 1}>Down</button>
                   <button onClick={() => handlePause(t.id)}>Pause</button>
@@ -245,4 +359,11 @@ function taskAge(createdAt: string) {
   if (diff === 0) return 'Today';
   if (diff === 1) return '1 day';
   return `${diff} days`;
+}
+
+function formatDuration(totalSeconds: number) {
+  const safe = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
