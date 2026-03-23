@@ -243,6 +243,7 @@ Full rows: **FEATURE_TRACKER.md §2** (columns: target release, value, P0–P3, 
 | **P-F1** Body doubling mode | 🚧 In progress | First slice is built: a Daily body-doubling panel with task-linked sessions, work timers, and gentle timed check-ins. Still needs persistence, richer companion tone tuning, and broader product validation. |
 | **P-F2** Sensory-friendly themes | 🚧 In progress | First slice is built: persisted Calm / Focus / Warm themes with app-wide styling and settings controls. Still needs all-screen polish and accessibility verification across state combinations. |
 | **P-F3** Celebration moments | 🚧 In progress | First slice is built: subtle opt-in Daily completion feedback that respects reduce motion. Still needs broader trigger coverage and tone tuning. |
+| **P-F4** Persona-based onboarding | 🚧 In progress | First slice is built: onboarding persona selection with tailored setup copy, starter playbooks, and first brain-dump prompts. Still needs deeper branching and measurement. |
 
 ---
 
