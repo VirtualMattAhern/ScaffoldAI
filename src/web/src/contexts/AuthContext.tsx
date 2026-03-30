@@ -9,6 +9,10 @@ const SESSION_TOKEN_KEY = 'skafoldai_session_token';
 
 export type User = { id: string; email: string; displayName: string };
 
+type LoginResponse =
+  | { user: User; token?: string }
+  | { id: string; email: string; displayName: string; token?: string };
+
 function loadUser(): User | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -18,6 +22,18 @@ function loadUser(): User | null {
   } catch {
     return null;
   }
+}
+
+function normalizeLoginUser(data: LoginResponse): User | null {
+  if ('user' in data && data.user?.id && data.user?.email) return data.user;
+  if ('id' in data && data.id && data.email) {
+    return {
+      id: data.id,
+      email: data.email,
+      displayName: data.displayName,
+    };
+  }
+  return null;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
@@ -59,10 +75,12 @@ function AuthProviderInner({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email.trim(), displayName: displayName?.trim() || undefined }),
     });
     if (!res.ok) throw new Error(await res.text().catch(() => 'Login failed'));
-    const data = (await res.json()) as { user: User; token: string };
-    setSessionToken(data.token);
-    setUser(data.user);
-    return data.user;
+    const data = (await res.json()) as LoginResponse;
+    const nextUser = normalizeLoginUser(data);
+    if (!nextUser) throw new Error('Login response missing user.');
+    setSessionToken('token' in data ? (data.token ?? null) : null);
+    setUser(nextUser);
+    return nextUser;
   }, [setSessionToken, setUser]);
 
   const loginWithEntra = useCallback(async () => {
@@ -197,9 +215,8 @@ function AuthProviderFallback({ children }: { children: ReactNode }) {
         setSessionToken(migrated.token);
         setUserState(migrated.user);
       } catch {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(SESSION_TOKEN_KEY);
-        setUserState(null);
+        // Older deployments still use X-User-Id auth and do not expose legacy-session.
+        setUserState(currentUser);
       } finally {
         setLoading(false);
       }
@@ -221,10 +238,12 @@ function AuthProviderFallback({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email: email.trim(), displayName: displayName?.trim() || undefined }),
     });
     if (!res.ok) throw new Error(await res.text().catch(() => 'Login failed'));
-    const data = (await res.json()) as { user: User; token: string };
-    setSessionToken(data.token);
-    setUser(data.user);
-    return data.user;
+    const data = (await res.json()) as LoginResponse;
+    const nextUser = normalizeLoginUser(data);
+    if (!nextUser) throw new Error('Login response missing user.');
+    setSessionToken('token' in data ? (data.token ?? null) : null);
+    setUser(nextUser);
+    return nextUser;
   }, [setSessionToken, setUser]);
 
   const value: AuthContextValue = {

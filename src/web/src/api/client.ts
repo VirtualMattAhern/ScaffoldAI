@@ -1,6 +1,7 @@
 // In dev, Vite proxies /api to the API. In production, use VITE_API_URL (e.g. https://api.skafoldai.com/api)
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 const SESSION_TOKEN_KEY = 'skafoldai_session_token';
+const LEGACY_USER_KEY = 'skafoldai_user';
 
 let authTokenProvider: (() => Promise<string | null>) | null = null;
 
@@ -14,6 +15,11 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const sessionToken = localStorage.getItem(SESSION_TOKEN_KEY);
     if (sessionToken) return { Authorization: `Bearer ${sessionToken}` };
+    const rawUser = localStorage.getItem(LEGACY_USER_KEY);
+    if (rawUser) {
+      const parsed = JSON.parse(rawUser) as { id?: string };
+      if (parsed?.id) return { 'X-User-Id': parsed.id };
+    }
   } catch {
     // localStorage may be unavailable in privacy-restricted contexts
   }
